@@ -1,149 +1,238 @@
-# 🏛️ ระบบทะเบียนคุมวัสดุ — Railway + PostgreSQL
+# 🏛️ ระบบทะเบียนคุมวัสดุ (Inventory Management System)
 
-## สิ่งที่เปลี่ยนจากเวอร์ชัน SQLite
+ระบบจัดการพัสดุสำหรับหน่วยงานราชการ มี 2 เวอร์ชัน:
 
-| หัวข้อ | เวอร์ชันเดิม | เวอร์ชันนี้ |
-|--------|-------------|------------|
-| ฐานข้อมูล | SQLite (ไฟล์) | **PostgreSQL** (เซิร์ฟเวอร์) |
-| Hosting | ในเครื่อง | **Railway** (ออนไลน์) |
-| เปิดดูข้อมูลด้วย | - | **TablePlus** |
-| ข้อมูลหายเมื่อ redeploy | ❌ หาย (SQLite) | ✅ **ไม่หาย** (PostgreSQL แยก) |
-| API เหมือนเดิม | ✅ | ✅ เหมือนเดิม 100% |
-| หน้าเว็บ | ✅ | ✅ เหมือนเดิม 100% |
+1. **🖥️ Desktop App** (Python + PySide6 + SQLite) — **แนะนำ** สำหรับงานราชการทั่วไป ใช้งาน Offline 100%
+2. **🌐 Web App** (Node.js + Express + PostgreSQL) — สำหรับ Deploy บน Railway/Render
 
 ---
 
-## 🚀 Deploy ขึ้น Railway (ทีละขั้นตอน)
+## 📱 Desktop App (Windows) — ใช้งาน Offline
 
-### ขั้นตอนที่ 1: สมัคร Railway
-1. ไปที่ https://railway.app
-2. กด **Login** → เข้าด้วย GitHub
+### ⚙️ ความต้องการระบบ
+- Windows 10 หรือ 11
+- Python 3.11 หรือสูงกว่า → [ดาวน์โหลด Python](https://www.python.org/downloads/)
+  - ⚠️ ตอนติดตั้ง Python ให้ติ๊กช่อง **"Add Python to PATH"**
 
-### ขั้นตอนที่ 2: สร้าง GitHub Repository
+---
+
+### 🚀 วิธีติดตั้งและรัน (Windows)
+
+#### **ขั้นตอนที่ 1: ดาวน์โหลดโปรเจกต์**
+
+**วิธีที่ 1 — ใช้ Git** (แนะนำ)
+```cmd
+git clone https://github.com/kit154696/inventory-system.git
+cd inventory-system\app
+```
+
+**วิธีที่ 2 — ดาวน์โหลด ZIP**
+1. ไปที่ https://github.com/kit154696/inventory-system
+2. กดปุ่ม **Code** (สีเขียว) → **Download ZIP**
+3. แตกไฟล์ → เปิด Command Prompt → `cd` เข้าไปในโฟลเดอร์ `inventory-system\app`
+
+---
+
+#### **ขั้นตอนที่ 2: สร้าง Virtual Environment**
+```cmd
+python -m venv .venv
+```
+
+---
+
+#### **ขั้นตอนที่ 3: เปิดใช้งาน Virtual Environment**
+```cmd
+.venv\Scripts\activate
+```
+> หลังรันคำสั่งนี้จะเห็น `(.venv)` ขึ้นหน้าบรรทัด
+
+---
+
+#### **ขั้นตอนที่ 4: ติดตั้ง Dependencies**
+```cmd
+pip install -r requirements.txt
+```
+> จะติดตั้ง PySide6 (GUI) และ openpyxl (Excel export)
+
+---
+
+#### **ขั้นตอนที่ 5: รันโปรแกรม**
+```cmd
+python main.py
+```
+
+✅ **เสร็จแล้ว!** โปรแกรมจะเปิดขึ้นมา
+
+**ครั้งแรกที่เปิด:**
+- จะสร้างฐานข้อมูล SQLite อัตโนมัติที่ `C:\Users\<ชื่อคุณ>\AppData\Roaming\StockApp\data\app.db`
+- พร้อม seed ข้อมูลเริ่มต้น **17 ประเภทวัสดุ** และ **433 รายการวัสดุ**
+
+---
+
+### 📦 Build เป็น EXE (ไม่ต้องติดตั้ง Python)
+
+ถ้าต้องการแจกจ่ายให้คนอื่นใช้ โดยไม่ต้องติดตั้ง Python:
+
+```cmd
+cd app
+build.bat
+```
+
+**ผลลัพธ์:** ไฟล์ `.exe` จะอยู่ที่ `dist\StockApp\StockApp.exe`
+
+**วิธีแจกจ่าย:**
+- Copy **ทั้งโฟลเดอร์** `dist\StockApp` ไปวางบนเครื่องอื่น
+- ดับเบิลคลิก `StockApp.exe` ใช้งานได้เลย (ไม่ต้องติดตั้งอะไรเพิ่ม)
+
+---
+
+### ✨ ฟีเจอร์ Desktop App
+
+#### **Phase 1 — ระบบหลัก**
+- ✅ ทะเบียนคุมวัสดุ (เพิ่ม/แก้ไข/ลบ)
+- ✅ ค้นหา กรอง เรียงลำดับ
+- ✅ บันทึกเอกสารรับเข้า/เบิกจ่าย
+- ✅ สร้างเลขที่เอกสารอัตโนมัติ (เช่น `IN-0001/69`)
+- ✅ ป้องกันเบิกเกินสต็อก (hard block)
+- ✅ รายงานคงเหลือ + บัตรคุมวัสดุ
+- ✅ Dashboard สรุปภาพรวม
+
+#### **Phase 2 — Export/Import/Backup**
+- ✅ Export ข้อมูล 3 รูปแบบ: **ZIP** (full backup), **JSON**, **CSV**
+- ✅ Import พร้อมตรวจสอบความถูกต้อง 10 ขั้นตอน
+- ✅ Auto-backup ก่อน Import (เก็บ 10 ฉบับล่าสุด)
+- ✅ Restore จาก backup เดิม
+
+#### **Phase 2b — รายงานและการพิมพ์**
+- ✅ รายงานรับจ่ายพัสดุประจำปีงบประมาณ (Thai fiscal year)
+- ✅ Export Excel พร้อม styling
+- ✅ พิมพ์เอกสาร 4 แบบ:
+  - บัตรคุมวัสดุ
+  - ใบรับพัสดุ
+  - ใบเบิกพัสดุ (พร้อมกรอบลงชื่อ)
+  - รายงานประจำปี (แนวนอน)
+- ✅ Print to PDF ผ่าน "Microsoft Print to PDF"
+- ✅ Pagination 50 รายการ/หน้า
+
+#### **UI/UX**
+- ✅ ธีมราชการคลาสสิก (น้ำเงิน-ทอง)
+- ✅ ฟอนต์ไทย **TH SarabunPSK** ฝังมากับโปรแกรม
+- ✅ ขนาดตัวอักษร 12pt อ่านง่าย
+
+---
+
+## 🌐 Web App (Deploy บน Railway/Render)
+
+### ⚙️ ความต้องการ
+- Node.js 18+
+- PostgreSQL 14+
+
+### 🚀 ติดตั้ง Local
+
 ```bash
-# ในโฟลเดอร์โปรเจกต์นี้
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/ชื่อคุณ/stock-app.git
-git push -u origin main
-```
-
-### ขั้นตอนที่ 3: สร้าง Project บน Railway
-1. ไปที่ **Railway Dashboard** → กด **New Project**
-2. เลือก **Deploy from GitHub Repo**
-3. เลือก repo ที่เพิ่ง push
-4. Railway จะ detect เป็น Node.js อัตโนมัติ
-
-### ขั้นตอนที่ 4: เพิ่ม PostgreSQL Database
-1. ในหน้า Project → กด **+ New** (มุมขวาบน)
-2. เลือก **Database** → **Add PostgreSQL**
-3. Railway จะสร้าง PostgreSQL และตั้ง **DATABASE_URL** ให้อัตโนมัติ
-
-### ขั้นตอนที่ 5: เชื่อม Database กับ App
-1. คลิกที่ **Service** ของแอป (ตัวที่ deploy จาก GitHub)
-2. ไปที่แท็บ **Variables**
-3. กด **Add Reference Variable**
-4. เลือก **DATABASE_URL** จาก PostgreSQL service
-5. Railway จะ redeploy อัตโนมัติ
-
-### ขั้นตอนที่ 6: เปิดใช้งาน
-1. ไปที่แท็บ **Settings** ของ service
-2. กด **Generate Domain** เพื่อสร้าง URL สาธารณะ
-3. เปิด URL ที่ได้ เช่น `https://stock-app-xxxxx.up.railway.app`
-4. **ครั้งแรก**: ระบบจะสร้างตารางและ seed ข้อมูล 433 รายการอัตโนมัติ!
-
----
-
-## 🔌 เชื่อมต่อ TablePlus
-
-### หา Connection Info
-1. ใน Railway Dashboard → คลิกที่ **PostgreSQL** service
-2. ไปแท็บ **Connect**
-3. จะเห็นข้อมูล:
-   - **Host**: `xxxxx.railway.internal` (ใช้ Public URL แทน)
-   - **Port**: `xxxxx`
-   - **User**: `postgres`
-   - **Password**: `xxxxx`
-   - **Database**: `railway`
-4. **สำคัญ**: กดเปิด **Public Networking** ใน Settings ของ PostgreSQL เพื่อเชื่อมต่อจากภายนอก
-5. จะได้ Public Host + Port ใหม่
-
-### ตั้งค่า TablePlus
-1. เปิด TablePlus → กด **+** สร้าง Connection ใหม่
-2. เลือก **PostgreSQL**
-3. กรอกข้อมูล:
-   - **Name**: `Stock อปท. (Railway)`
-   - **Host**: (Public Host จาก Railway)
-   - **Port**: (Public Port จาก Railway)
-   - **User**: `postgres`
-   - **Password**: (จาก Railway)
-   - **Database**: `railway`
-   - ✅ เปิด **SSL**
-4. กด **Test** → ถ้าขึ้นเขียว กด **Connect**
-
-### ตารางที่จะเห็นใน TablePlus
-| ตาราง | คำอธิบาย |
-|-------|---------|
-| `settings` | ค่าตั้งค่าระบบ (ชื่อหน่วยงาน) |
-| `categories` | ประเภทวัสดุ 17 ประเภท |
-| `items` | ทะเบียนวัสดุ 433 รายการ |
-| `transactions` | เอกสารรับเข้า/เบิกจ่าย |
-| `transaction_lines` | รายการวัสดุในเอกสาร |
-
----
-
-## 📁 โครงสร้างไฟล์
-
-```
-railway-app/
-├── server.js          ← Backend API (Express + PostgreSQL)
-├── init-db.js         ← สร้างตาราง + seed (ทำงานอัตโนมัติ)
-├── package.json       ← Dependencies (pg, express, cors, dotenv)
-├── Procfile           ← Railway start command
-├── .gitignore
-├── .env.example       ← ตัวอย่าง config สำหรับ local
-├── README.md          ← คู่มือนี้
-└── public/
-    └── index.html     ← หน้าเว็บ (เหมือนเดิมทุกอย่าง)
-```
-
----
-
-## 💻 ใช้งาน Local (สำหรับพัฒนา)
-
-```bash
-# 1. ติดตั้ง PostgreSQL ในเครื่อง (หรือใช้ Docker)
-docker run --name stock-pg -e POSTGRES_PASSWORD=password -e POSTGRES_DB=stock_db -p 5432:5432 -d postgres:16
-
-# 2. สร้างไฟล์ .env
-cp .env.example .env
-
-# 3. ติดตั้ง dependencies
 npm install
-
-# 4. สร้างตารางและ seed ข้อมูล
-npm run init-db
-
-# 5. เริ่มเซิร์ฟเวอร์
+cp .env.example .env
+# แก้ไข .env ใส่ DATABASE_URL และ SESSION_SECRET
+node init-db.js
 npm start
+```
 
-# เปิด http://localhost:3000
+เปิดเว็บที่ `http://localhost:3000`
+
+### ☁️ Deploy บน Railway
+
+1. สร้าง Project ใหม่บน [Railway](https://railway.app)
+2. เลือก **Deploy from GitHub Repo**
+3. เพิ่ม **PostgreSQL Database**
+4. Add Reference Variable: `DATABASE_URL`
+5. Generate Domain → เข้าใช้งาน
+
+**ครั้งแรกเปิด:** ระบบจะสร้างตารางและ seed ข้อมูล 433 รายการอัตโนมัติ
+
+---
+
+## 📂 โครงสร้างโปรเจกต์
+
+```
+inventory-system/
+├── app/                     # 🖥️ Desktop App (Python/PySide6/SQLite)
+│   ├── main.py             # จุดเริ่มต้น
+│   ├── requirements.txt    # PySide6==6.10.1, openpyxl==3.1.5
+│   ├── build.bat           # Build เป็น .exe
+│   ├── database/           # Models, Migrations, Seed data
+│   ├── ui/                 # GUI (main_window, dialogs, widgets, theme)
+│   ├── services/           # Export, Import, Backup, Print, Report
+│   ├── utils/              # Validators, Paths, Thai Date
+│   ├── assets/fonts/       # TH SarabunPSK (4 styles)
+│   └── packaging/          # stockapp.iss (Inno Setup installer)
+│
+├── server.js               # 🌐 Web App (Node.js/Express/PostgreSQL)
+├── init-db.js              # PostgreSQL schema + seed
+├── validators.js           # Validation rules
+├── public/                 # Web frontend
+│   ├── index.html          # Single-page app
+│   ├── login.html
+│   └── security-test.html
+├── package.json
+├── Procfile                # Railway deployment
+└── README.md               # คู่มือนี้
 ```
 
 ---
 
-## ❓ FAQ
+## 🔐 ความปลอดภัยข้อมูล
 
-**Q: ทำไมไม่ใช้ SQLite?**
-A: Railway ใช้ ephemeral filesystem — ไฟล์จะหายทุกครั้งที่ redeploy. PostgreSQL เป็น service แยก ข้อมูลไม่หาย.
+### Desktop App
+- ✅ SQLite **WAL mode** + Foreign Keys enforcement
+- ✅ Transaction-based writes (validate → begin → commit/rollback)
+- ✅ ฐานข้อมูลอยู่ที่ `%APPDATA%` ไม่ผูกกับโฟลเดอร์โปรแกรม
+- ✅ Backup/Export **ไม่มี** hardcoded path, username, computer name
+- ✅ **ย้ายเครื่องได้** โดย Export → Import backup file
 
-**Q: Railway ฟรีไหม?**
-A: Railway ให้ $5 credit/เดือนในแพลน Trial. สำหรับ อปท. ขนาดเล็ก ปกติจะพออยู่ ถ้าเกินจ่ายตามใช้จริง.
+### Web App
+- ✅ bcrypt password hashing
+- ✅ express-session
+- ✅ Input validation + sanitization
+- ✅ SQL injection protection (parameterized queries)
 
-**Q: Backup ข้อมูลยังไง?**
-A: ใช้ปุ่ม "สำรองข้อมูล" ในเว็บ หรือ export จาก TablePlus หรือใช้ `pg_dump` จาก command line.
+---
 
-**Q: ใช้ Neon / Supabase แทน Railway PostgreSQL ได้ไหม?**
-A: ได้ครับ แค่เปลี่ยน DATABASE_URL ใน Environment Variables เป็นของ provider นั้น.
+## 🆘 แก้ปัญหาที่พบบ่อย
+
+### Desktop App
+
+**Q: กด `python main.py` แล้วขึ้น "python is not recognized"**  
+A: ยังไม่ได้ติดตั้ง Python หรือไม่ได้ติ๊ก "Add Python to PATH" ตอนติดตั้ง → ติดตั้ง Python ใหม่แล้วติ๊กช่องนั้น
+
+**Q: กด `.venv\Scripts\activate` แล้วขึ้น error**  
+A: ใช้ PowerShell แทน CMD หรือรันคำสั่งนี้ใน CMD:
+```cmd
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Q: โปรแกรมเปิดแล้วตัวอักษรไทยแสดงเป็นกล่อง □□□**  
+A: ปกติไม่ควรเกิด เพราะโปรแกรมฝังฟอนต์ TH SarabunPSK มาแล้ว — ถ้าเจอให้ปิดโปรแกรมแล้วเปิดใหม่
+
+**Q: ต้องการลบข้อมูลทั้งหมดเริ่มใหม่**  
+A: ลบไฟล์ `C:\Users\<ชื่อคุณ>\AppData\Roaming\StockApp\data\app.db` แล้วเปิดโปรแกรมใหม่
+
+---
+
+## 📞 ติดต่อ / รายงานปัญหา
+
+- **GitHub Issues:** https://github.com/kit154696/inventory-system/issues
+- **Desktop App README เพิ่มเติม:** `app/README.md`
+
+---
+
+## 📜 License
+
+สำหรับการศึกษาและใช้งานในหน่วยงานราชการ
+
+---
+
+## 🙏 Credits
+
+- Developed with **Claude Code** (Anthropic)
+- Thai Font: **TH SarabunPSK** by TLWG
+- UI Framework: **PySide6** (Qt for Python)
