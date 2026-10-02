@@ -1,0 +1,17 @@
+node_modules/
+.env
+*.db
+.DS_Store
+
+# Python desktop app (app/)
+app/__pycache__/
+app/**/__pycache__/
+app/*.pyc
+app/.venv/
+app/build/
+app/dist/
+app/*.spec
+app/data/*.db
+app/data/*.db-*
+app/packaging/output/
+

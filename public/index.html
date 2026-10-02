@@ -1,0 +1,2732 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบทะเบียนคุมวัสดุ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --primary-light: #234578;
+            --primary-dark: #0f2240;
+            --accent: #c59a2e;
+            --accent-light: #e8c55a;
+            --accent-bg: #fdf8ed;
+            --success: #16794a;
+            --success-bg: #ecfdf5;
+            --warning: #b45309;
+            --warning-bg: #fffbeb;
+            --danger: #b91c1c;
+            --danger-bg: #fef2f2;
+            --info: #1e6bb0;
+            --info-bg: #eff6ff;
+            --light: #f1f3f7;
+            --dark: #1a252f;
+            --border: #d4d8e0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --sidebar-width: 270px;
+            --font-main: 'Sarabun', sans-serif;
+            --font-head: 'Noto Serif Thai', serif;
+            --radius: 6px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        body { margin: 0; font-family: var(--font-main); background-color: var(--light); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+        /* ====== SIDEBAR ====== */
+        .sidebar {
+            width: var(--sidebar-width); background: var(--primary); color: white;
+            display: flex; flex-direction: column; transition: 0.3s; z-index: 1000;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+        }
+        .sidebar .brand {
+            padding: 20px; font-size: 1rem; font-weight: 600;
+            background: var(--primary-dark);
+            display: flex; align-items: center; gap: 14px;
+            border-bottom: 2px solid var(--accent);
+            position: relative;
+        }
+        .brand-icon {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--accent); color: var(--primary-dark);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
+        }
+        .brand-text { display: flex; flex-direction: column; gap: 0; }
+        .brand-text .title { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.5px; }
+        .brand-text .sub { font-size: 0.75rem; opacity: 0.6; font-weight: 400; }
+
+        .sidebar .menu { flex: 1; padding: 12px 0; overflow-y: auto; }
+        .menu-section { padding: 10px 20px 6px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); font-weight: 600; }
+        .menu-item {
+            display: flex; align-items: center; padding: 11px 20px; color: rgba(255,255,255,0.65);
+            text-decoration: none; transition: all 0.2s; border-left: 3px solid transparent;
+            font-size: 0.95rem; gap: 12px; margin: 1px 0;
+        }
+        .menu-item:hover { background: rgba(255,255,255,0.07); color: white; }
+        .menu-item.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--accent); font-weight: 600; }
+        .menu-item i { width: 20px; text-align: center; font-size: 0.95rem; }
+
+        .footer-menu {
+            padding: 12px; border-top: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.1);
+        }
+        .footer-menu .menu-item { font-size: 0.85rem; padding: 8px 16px; color: rgba(255,255,255,0.5); }
+        .footer-menu .menu-item:hover { color: rgba(255,255,255,0.8); }
+
+        /* ====== MAIN CONTENT ====== */
+        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background: var(--light); }
+        .header {
+            background: white; padding: 0 28px; height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border); z-index: 10;
+        }
+        .header h2 { margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .header h2 i { color: var(--accent); font-size: 0.9rem; }
+        .user-info { display: flex; align-items: center; gap: 10px; font-weight: 500; color: var(--text-muted); font-size: 0.9rem; }
+        .user-info .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        #btnMenu { display: none; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--primary); padding: 4px; }
+
+        /* ====== SECTIONS ====== */
+        .page-section { display: none; padding: 24px 28px; overflow-y: auto; height: 100%; animation: fadeIn 0.3s; }
+        .page-section.active { display: block; }
+
+        /* ====== CARDS ====== */
+        .card {
+            background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm);
+            margin-bottom: 24px; border: 1px solid var(--border); overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px; border-bottom: 1px solid #eef0f4;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fafbfc;
+        }
+        .card-header h3 { margin: 0; font-size: 1rem; color: var(--primary); display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .card-header h3 i { color: var(--accent); }
+        .card-body { padding: 20px; }
+
+        /* ====== STAT CARDS ====== */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin-bottom: 24px; }
+        .stat-card {
+            padding: 20px; display: flex; align-items: center; border-radius: var(--radius);
+            border: 1px solid var(--border); color: var(--text); position: relative; overflow: hidden;
+            background: white; box-shadow: var(--shadow-sm); transition: box-shadow 0.2s;
+        }
+        .stat-card:hover { box-shadow: var(--shadow-md); }
+        .stat-card .icon {
+            width: 50px; height: 50px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; margin-right: 16px; flex-shrink: 0;
+        }
+        .stat-card .info h3 { margin: 0 0 2px; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+        .stat-card .info p { margin: 0; font-size: 1.6rem; font-weight: 700; }
+        .stat-card.blue { border-top: 3px solid var(--info); }
+        .stat-card.blue .icon { background: var(--info-bg); color: var(--info); }
+        .stat-card.blue .info p { color: var(--info); }
+        .stat-card.green { border-top: 3px solid var(--success); }
+        .stat-card.green .icon { background: var(--success-bg); color: var(--success); }
+        .stat-card.green .info p { color: var(--success); }
+        .stat-card.red { border-top: 3px solid var(--danger); }
+        .stat-card.red .icon { background: var(--danger-bg); color: var(--danger); }
+        .stat-card.red .info p { color: var(--danger); }
+        .stat-card.orange { border-top: 3px solid var(--warning); }
+        .stat-card.orange .icon { background: var(--warning-bg); color: var(--warning); }
+        .stat-card.orange .info p { color: var(--warning); }
+
+        .content-grid { display: grid; grid-template-columns: 2fr 1.2fr; gap: 24px; }
+
+        /* ====== TABLES ====== */
+        .table-responsive { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .table th, .table td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #eef0f4; }
+        .table th { background: #f7f8fa; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; white-space: nowrap; }
+        .table-striped tbody tr:nth-of-type(even) { background-color: #fafbfc; }
+        .table-hover tbody tr:hover { background-color: #f0f4f8; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* ====== FORMS ====== */
+        .form-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+        .form-group { flex: 1; min-width: 200px; }
+        .flex-2 { flex: 2; }
+        .flex-3 { flex: 3; }
+        .align-end { align-items: flex-end; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); }
+        input, select {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+            font-family: var(--font-main); font-size: 0.95rem; transition: 0.2s; background: #fff; color: var(--text);
+        }
+        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1); }
+        input[readonly] { background-color: #f5f6f8; color: var(--text-muted); }
+
+        /* ====== BUTTONS ====== */
+        .btn {
+            padding: 9px 18px; border: none; border-radius: var(--radius); cursor: pointer;
+            font-family: var(--font-main); font-weight: 600; transition: all 0.15s;
+            display: inline-flex; align-items: center; gap: 7px; font-size: 0.9rem;
+            text-decoration: none;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-light); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { opacity: 0.9; }
+        .btn-secondary { background: #e2e8f0; color: var(--text); }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-accent { background: var(--accent); color: white; }
+
+        /* ====== CART ====== */
+        .cart-box {
+            background: #f8fafc; padding: 20px; border-radius: var(--radius);
+            border: 1px dashed #c7d2e0; margin-bottom: 20px;
+        }
+        .cart-box h4 { margin: 0 0 16px; color: var(--primary); display: flex; align-items: center; gap: 10px; font-size: 1rem; }
+
+        /* ====== MODAL ====== */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(15,34,64,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-content { background: white; width: 600px; max-width: 95%; border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); display: flex; flex-direction: column; max-height: 90vh; animation: zoomIn 0.2s; }
+        .print-modal-content { width: 210mm; height: 95vh; max-width: 98%; }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid #eef0f4; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; border-radius: 10px 10px 0 0; }
+        .modal-header h3 { margin: 0; color: var(--primary); font-size: 1.05rem; }
+        .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #eef0f4; text-align: right; gap: 10px; display: flex; justify-content: flex-end; background: #fafbfc; border-radius: 0 0 10px 10px; }
+        .close { font-size: 1.5rem; cursor: pointer; color: #94a3b8; transition: 0.2s; font-weight: 300; }
+        .close:hover { color: var(--danger); }
+
+        /* ====== TOAST ====== */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--primary); color: white; padding: 12px 24px; border-radius: var(--radius); display: none; align-items: center; gap: 10px; z-index: 3000; animation: slideIn 0.3s; box-shadow: var(--shadow-md); font-size: 0.9rem; }
+        .toast i { color: var(--accent-light); }
+
+        /* ====== BADGES ====== */
+        .db-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+        .db-badge.sql { background: var(--accent); color: var(--primary-dark); }
+        .db-badge.local { background: #f59e0b; color: white; }
+
+        /* ====== LOADING ====== */
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 5000; align-items: center; justify-content: center; }
+        .loading-overlay.active { display: flex; }
+        .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ====== ANIMATIONS ====== */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* ====== PRINT ====== */
+        .print-area { padding: 15mm; font-size: 14pt; background: white; min-height: 100%; overflow: auto; color: #000; font-family: 'Sarabun', sans-serif; line-height: 1.5; }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 12pt; margin-bottom: 10px; }
+        .print-table th, .print-table td { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+        .print-table th { text-align: center; font-weight: bold; background-color: #f0f0f0; }
+        .print-table td { vertical-align: middle; }
+        .doc-header { text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 18pt; line-height: 1.2; }
+        .doc-sub { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12pt; font-weight: normal; }
+        .sign-table { width: 100%; border-collapse: collapse; margin-top: 20px; page-break-inside: avoid; }
+        .sign-table td { border: 1px solid #000; padding: 10px; vertical-align: top; width: 50%; height: 130px; text-align: center; font-size: 12pt; }
+        .sign-table.noborder td { border: none !important; height: auto; padding: 5px; text-align: center; }
+        .sign-caption { text-align: left; font-size: 11pt; font-weight: bold; margin-bottom: 5px; }
+        .sign-line { margin-top: 40px; margin-bottom: 5px; font-weight: normal; }
+
+        /* ====== LOGIN SCREEN ====== */
+        /* login CSS ย้ายไป login.html แล้ว */
+
+        /* ====== TOGGLE SWITCH ====== */
+        .rl-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .rl-switch input { opacity: 0; width: 0; height: 0; }
+        .rl-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 24px; transition: 0.3s; }
+        .rl-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        .rl-switch input:checked + .rl-slider { background: var(--success); }
+        .rl-switch input:checked + .rl-slider:before { transform: translateX(20px); }
+
+        /* ====== RESPONSIVE ====== */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -100%; height: 100%; }
+            .sidebar.active { left: 0; }
+            #btnMenu { display: block; }
+            .content-grid { grid-template-columns: 1fr; }
+            .form-row .flex-2, .form-row .flex-3 { flex: 1 100%; }
+            .modal-content { width: 100%; height: 100%; border-radius: 0; }
+            .page-section { padding: 16px; }
+        }
+
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body * { visibility: hidden; }
+            #printModal, #printModal * { visibility: visible; }
+            #printModal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; display: block !important; }
+            .modal-content { box-shadow: none; border: none; width: 100%; height: auto; max-width: 100%; }
+            .no-print, .close { display: none !important; }
+            .print-area { padding: 0; margin: 0; width: 100%; overflow: visible; height: auto; }
+            .print-table th, .print-table td, .sign-table td { border: 1px solid #000 !important; }
+            .sign-table.noborder td { border: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay" class="loading-overlay"><div class="spinner"></div></div>
+
+    <!-- ====== SIDEBAR ====== -->
+    <nav class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-landmark"></i></div>
+            <div class="brand-text">
+                <span class="title">e-Stock อปท.</span>
+                <span class="sub">ระบบทะเบียนคุมวัสดุ</span>
+            </div>
+            <span id="dbBadge" class="db-badge sql">SQL</span>
+        </div>
+        <div class="menu">
+            <div class="menu-section">เมนูหลัก</div>
+            <a href="#" class="menu-item active" onclick="nav('dashboard', this)">
+                <i class="fas fa-chart-pie"></i> แดชบอร์ด
+            </a>
+            <a href="#" class="menu-item" onclick="nav('transaction', this)">
+                <i class="fas fa-exchange-alt"></i> รับเข้า / เบิกจ่าย
+            </a>
+            <a href="#" class="menu-item" onclick="nav('master', this)">
+                <i class="fas fa-list-alt"></i> ทะเบียนวัสดุ
+            </a>
+            <a href="#" class="menu-item" onclick="nav('report', this)">
+                <i class="fas fa-print"></i> รายงานคงเหลือ
+            </a>
+            <a href="#" class="menu-item" id="menuAnnualReport" onclick="nav('annual-report', this)">
+                <i class="fas fa-exchange-alt"></i> รายงานรับ-จ่ายประจำปี
+            </a>
+        </div>
+        <div class="footer-menu">
+            <div class="menu-section">จัดการข้อมูล</div>
+            <a href="#" class="menu-item admin-only" id="menuUsers" onclick="nav('users', this)" style="display:none;">
+                <i class="fas fa-users"></i> จัดการผู้ใช้
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuOrgs" onclick="nav('orgs', this)" style="display:none;">
+                <i class="fas fa-building"></i> จัดการหน่วยงาน
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuAuditLog" onclick="nav('auditlog', this)" style="display:none;">
+                <i class="fas fa-history"></i> บันทึกการใช้งาน
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuRateLimit" onclick="nav('ratelimit', this)" style="display:none;">
+                <i class="fas fa-tachometer-alt"></i> ตั้งค่า Rate Limit
+            </a>
+            <a href="/security-test" target="_blank" class="menu-item admin-only" id="menuSecurityTest" style="display:none;">
+                <i class="fas fa-shield-alt"></i> ทดสอบความปลอดภัย
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuAutoBackup" onclick="nav('autobackup', this)" style="display:none;">
+                <i class="fas fa-cloud-upload-alt"></i> Auto Backup
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuBackup" onclick="backupData()" style="display:none;">
+                <i class="fas fa-download"></i> สำรองข้อมูล
+            </a>
+            <a href="#" class="menu-item admin-only" id="menuRestore" onclick="document.getElementById('fileRestore').click()" style="display:none;">
+                <i class="fas fa-upload"></i> นำเข้าข้อมูล
+            </a>
+            <input type="file" id="fileRestore" hidden onchange="restoreData(this)">
+            <a href="#" class="menu-item" onclick="openChangePwModal()">
+                <i class="fas fa-key"></i> เปลี่ยนรหัสผ่าน
+            </a>
+            <a href="#" class="menu-item" id="menuReset" onclick="resetData()" style="color: rgba(255,150,150,0.7);">
+                <i class="fas fa-trash"></i> ล้างข้อมูล
+            </a>
+            <a href="#" class="menu-item" onclick="doLogout()" style="color: rgba(255,200,150,0.7);">
+                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+            </a>
+        </div>
+    </nav>
+
+    <!-- ====== MAIN ====== -->
+    <main class="main-content">
+        <header class="header">
+            <button id="btnMenu" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            <h2><i class="fas fa-circle" style="font-size:6px;"></i> <span id="pageTitle">แดชบอร์ด</span></h2>
+            <div class="user-info">
+                <div id="sessionCountdownWrap" style="display:flex; align-items:center; gap:6px; margin-right:12px; font-size:0.82rem; color:var(--text-muted);">
+                    <i class="fas fa-clock" style="font-size:0.8rem;"></i>
+                    <span id="sessionCountdown" style="font-variant-numeric:tabular-nums; min-width:38px;">--:--</span>
+                </div>
+                <div id="orgDisplayWrap" style="display:none; align-items:center; gap:6px; margin-right:8px; font-size:0.82rem; color:var(--text-muted);">
+                    <i class="fas fa-building" style="font-size:0.8rem;"></i>
+                    <span id="orgDisplayText" style="font-weight:500; color:var(--primary);"></span>
+                    <!-- Admin dropdown to filter by org -->
+                    <select id="adminOrgFilter" style="display:none; font-size:0.8rem; padding:2px 6px; border:1px solid var(--border); border-radius:4px; margin-left:4px;" onchange="onAdminOrgFilterChange()">
+                        <option value="">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div style="text-align:right; line-height:1.3;">
+                    <span id="headerUsername" style="font-weight:600;"></span>
+                    <span id="headerRoleBadge" style="font-size:0.72rem; padding:2px 7px; border-radius:10px; margin-left:6px; vertical-align:middle;"></span>
+                </div>
+                <div class="avatar"><i class="fas fa-user"></i></div>
+            </div>
+        </header>
+
+        <div id="toast" class="toast">
+            <i class="fas fa-check-circle"></i> <span id="toastMsg">บันทึกสำเร็จ</span>
+        </div>
+
+        <!-- ===== DASHBOARD ===== -->
+        <section id="dashboard" class="page-section active">
+            <div class="stats-grid">
+                <div class="card stat-card blue">
+                    <div class="icon"><i class="fas fa-box"></i></div>
+                    <div class="info">
+                        <h3>รายการทั้งหมด</h3>
+                        <p id="d-totalItems">0</p>
+                    </div>
+                </div>
+                <div class="card stat-card green">
+                    <div class="icon"><i class="fas fa-coins"></i></div>
+                    <div class="info">
+                        <h3>มูลค่าคงคลัง</h3>
+                        <p id="d-totalValue">0.00</p>
+                    </div>
+                </div>
+                <div class="card stat-card red">
+                    <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="info">
+                        <h3>ใกล้หมด (Low)</h3>
+                        <p id="d-lowStock">0</p>
+                    </div>
+                </div>
+                <div class="card stat-card orange">
+                    <div class="icon"><i class="fas fa-file-invoice"></i></div>
+                    <div class="info">
+                        <h3>เอกสารปีนี้</h3>
+                        <p id="d-totalDocs">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-chart-bar"></i> มูลค่าคงคลังตามประเภท</h3></div>
+                    <div class="card-body"><canvas id="catChart" height="250"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3><i class="fas fa-bell"></i> รายการต้องจัดซื้อ</h3></div>
+                    <div class="card-body table-responsive">
+                        <table class="table table-striped" id="lowStockTable">
+                            <thead><tr><th>วัสดุ</th><th>คงเหลือ</th><th>Min</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== TRANSACTION ===== -->
+        <section id="transaction" class="page-section">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-file-alt"></i> บันทึก รับเข้า / เบิกจ่าย</h3></div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ประเภทเอกสาร</label>
+                            <select id="txType" onchange="toggleTxType()">
+                                <option value="OUT">🔴 ใบเบิกวัสดุ (OUT)</option>
+                                <option value="IN">🟢 ตรวจรับ/ซื้อเข้า (IN)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>วันที่เอกสาร</label>
+                            <input type="date" id="txDate" onchange="genDocNo()">
+                        </div>
+                        <div class="form-group">
+                            <label>เลขที่เอกสาร</label>
+                            <input type="text" id="txDocNo" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group flex-2">
+                            <label id="lblRef">เบิกโดย (กอง/ฝ่าย)</label>
+                            <input type="text" id="txRef" list="dlDepts" placeholder="ระบุหน่วยงาน/ร้านค้า">
+                            <datalist id="dlDepts"></datalist>
+                        </div>
+                        <div class="form-group flex-2">
+                            <label>หมายเหตุ</label>
+                            <input type="text" id="txNote">
+                        </div>
+                    </div>
+
+                    <div class="cart-box">
+                        <h4><i class="fas fa-cart-plus"></i> เพิ่มรายการวัสดุ</h4>
+                        <div class="form-row align-end">
+                            <div class="form-group flex-3">
+                                <label>ค้นหาวัสดุ (รหัส หรือ ชื่อ)</label>
+                                <input type="text" id="cartItemInput" list="dlItems" placeholder="พิมพ์เพื่อค้นหา..." onchange="selectCartItem()">
+                                <datalist id="dlItems"></datalist>
+                                <input type="hidden" id="cartItemId">
+                            </div>
+                            <div class="form-group">
+                                <label>คงเหลือ</label>
+                                <input type="text" id="cartBal" readonly style="text-align:center;">
+                            </div>
+                            <div class="form-group" id="grpPrice" style="display:none;">
+                                <label>ราคา/หน่วย</label>
+                                <input type="number" id="cartPrice" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>จำนวน</label>
+                                <input type="number" id="cartQty" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-primary" onclick="addToCart()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="margin-top:12px;">
+                            <table class="table" id="cartTable">
+                                <thead><tr><th>#</th><th>รหัส</th><th>รายการ</th><th class="text-right">ราคา/หน่วย</th><th class="text-center">จำนวน</th><th class="text-right">รวมเงิน</th><th class="text-center">ลบ</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="background:#f8fafc; padding:16px; border-radius:var(--radius); border:1px solid var(--border);">
+                        <div class="form-group">
+                            <label>ผู้จัดทำ / ผู้เบิก / ผู้รับ</label>
+                            <input type="text" id="txUser" placeholder="ชื่อ-สกุล">
+                        </div>
+                        <div class="form-group">
+                            <label>ผู้สั่งจ่าย / ผู้อนุมัติ</label>
+                            <input type="text" id="txApprover" placeholder="ชื่อ-สกุล">
+                        </div>
+                        <div class="form-group">
+                            <label>ผู้ตรวจสอบ</label>
+                            <input type="text" id="txChecker" placeholder="ชื่อ-สกุล">
+                        </div>
+                    </div>
+
+                    <div style="text-align:right; margin-top:16px;">
+                        <button class="btn btn-success" onclick="saveTransaction()" style="padding:12px 28px; font-size:1rem;">
+                            <i class="fas fa-save"></i> บันทึกเอกสาร
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-history"></i> ประวัติเอกสารล่าสุด</h3></div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-hover" id="txHistoryTable">
+                        <thead><tr><th>วันที่</th><th>เลขที่</th><th>ประเภท</th><th>อ้างอิง</th><th>รายการ</th><th>จัดการ</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== MASTER ===== -->
+        <section id="master" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-database"></i> ทะเบียนคุมวัสดุ</h3>
+                    <button class="btn btn-primary" onclick="openMasterModal()"><i class="fas fa-plus"></i> เพิ่มวัสดุ</button>
+                </div>
+                <div class="card-body">
+                    <div style="margin-bottom:14px;">
+                        <input type="text" id="searchMaster" placeholder="🔍 ค้นหารหัส หรือ ชื่อวัสดุ..." onkeyup="debounceRenderMaster()" style="max-width:400px;">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="masterTable">
+                            <thead><tr><th>รหัส</th><th>ชื่อวัสดุ (สเปค)</th><th>ประเภท</th><th>หน่วย</th><th class="text-center">คงเหลือ</th><th class="text-right">ราคาล่าสุด</th><th class="text-center">จัดการ</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== REPORT ===== -->
+        <section id="report" class="page-section">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-file-alt"></i> รายงานวัสดุคงเหลือ</h3></div>
+                <div class="card-body">
+                    <div class="form-row align-end">
+                        <div class="form-group flex-2">
+                            <label>หน่วยงาน (หัวรายงาน)</label>
+                            <input type="text" id="orgNameInput" value="ศูนย์พัฒนาเด็กองค์การบริหารส่วนตำบลเขิน1" onchange="updateOrgName()">
+                        </div>
+                        <div class="form-group">
+                            <label>ณ วันที่</label>
+                            <input type="date" id="repDate">
+                        </div>
+                        <div class="form-group flex-2">
+                            <label>หมวดวัสดุ</label>
+                            <select id="repCatFilter"><option value="">-- ทั้งหมด --</option></select>
+                        </div>
+                        <div class="form-group" style="display:flex; gap:8px; align-items:flex-end;">
+                            <button class="btn btn-primary" onclick="genReport()"><i class="fas fa-search"></i> แสดงรายงาน</button>
+                            <button class="btn btn-success" onclick="exportReportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        </div>
+                    </div>
+                    <div id="reportResult" class="report-container" style="margin-top:16px;">
+                        <div style="text-align:center; color:var(--text-muted); padding:40px; border:2px dashed var(--border); border-radius:var(--radius);">
+                            <i class="fas fa-file-alt" style="font-size:2rem; margin-bottom:8px; display:block; opacity:0.3;"></i>
+                            กรุณากดปุ่มแสดงรายงาน
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== AUDIT LOG ===== -->
+        <section id="auditlog" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-history"></i> บันทึกการใช้งานระบบ (Audit Log)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-row align-end" style="margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                        <div class="form-group" style="min-width:180px;">
+                            <label>กรอง Action</label>
+                            <select id="auditActionFilter" onchange="renderAuditLog(1)">
+                                <option value="">— ทั้งหมด —</option>
+                                <option value="LOGIN_SUCCESS">LOGIN_SUCCESS</option>
+                                <option value="LOGIN_FAILED">LOGIN_FAILED</option>
+                                <option value="ITEM_CREATE">ITEM_CREATE</option>
+                                <option value="ITEM_UPDATE">ITEM_UPDATE</option>
+                                <option value="ITEM_DELETE">ITEM_DELETE</option>
+                                <option value="TRANSACTION_CREATE">TRANSACTION_CREATE</option>
+                                <option value="TRANSACTION_DELETE">TRANSACTION_DELETE</option>
+                                <option value="SETTINGS_UPDATE">SETTINGS_UPDATE</option>
+                                <option value="DATA_BACKUP">DATA_BACKUP</option>
+                                <option value="DATA_RESTORE">DATA_RESTORE</option>
+                                <option value="DATA_RESET">DATA_RESET</option>
+                                <option value="USER_CREATE">USER_CREATE</option>
+                                <option value="USER_DELETE">USER_DELETE</option>
+                                <option value="PASSWORD_CHANGE">PASSWORD_CHANGE</option>
+                                <option value="RATE_LIMIT_UPDATE">RATE_LIMIT_UPDATE</option>
+                                <option value="SECURITY_TEST">SECURITY_TEST</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ตั้งแต่วันที่</label>
+                            <input type="date" id="auditDateFrom" onchange="renderAuditLog(1)">
+                        </div>
+                        <div class="form-group">
+                            <label>ถึงวันที่</label>
+                            <input type="date" id="auditDateTo" onchange="renderAuditLog(1)">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-secondary" onclick="renderAuditLog(1)">
+                                <i class="fas fa-sync-alt"></i> รีเฟรช
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" style="font-size:0.88rem;">
+                            <thead>
+                                <tr>
+                                    <th style="width:150px;">เวลา</th>
+                                    <th style="width:100px;">ผู้ใช้</th>
+                                    <th style="width:160px;">Action</th>
+                                    <th style="width:100px;">Resource</th>
+                                    <th>รายละเอียด</th>
+                                    <th style="width:120px;">IP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogTable"></tbody>
+                        </table>
+                    </div>
+                    <div id="auditPagination" style="display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ANNUAL REPORT (รับ-จ่ายประจำปีงบประมาณ) ===== -->
+        <section id="annual-report" class="page-section">
+            <div class="card">
+                <div class="card-header" style="flex-wrap:wrap; gap:8px;">
+                    <h3><i class="fas fa-exchange-alt"></i> รายงานรับ-จ่ายพัสดุประจำปีงบประมาณ</h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <select id="arFiscalYear" style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit;"></select>
+                        <select id="arCategory" style="padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit;">
+                            <option value="ALL">รวมทุกประเภท</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="renderAnnualReport()"><i class="fas fa-search"></i> แสดงรายงาน</button>
+                        <button class="btn btn-secondary" onclick="exportAnnualReport()"><i class="fas fa-file-excel"></i> Export Excel</button>
+                        <button class="btn btn-secondary" onclick="printAnnualReport()"><i class="fas fa-print"></i> พิมพ์</button>
+                    </div>
+                </div>
+                <div class="card-body" id="annualReportContent">
+                    <div style="text-align:center; color:var(--text-muted); padding:40px;">เลือกปีงบประมาณแล้วกด "แสดงรายงาน"</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== USERS MANAGEMENT ===== -->
+        <section id="users" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-users"></i> จัดการผู้ใช้งาน</h3>
+                    <button class="btn btn-primary" onclick="openAddUserModal()"><i class="fas fa-user-plus"></i> เพิ่มผู้ใช้</button>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-hover" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>ชื่อผู้ใช้</th>
+                                <th>สิทธิ์</th>
+                                <th>หน่วยงาน</th>
+                                <th>วันที่สร้าง</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== AUTO BACKUP ===== -->
+        <section id="autobackup" class="page-section">
+            <div class="card">
+                <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Auto Backup (7 วันล่าสุด)</h3>
+                    <button class="btn btn-secondary" onclick="renderAutoBackups()">
+                        <i class="fas fa-sync-alt"></i> รีเฟรช
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:12px 16px; margin-bottom:20px; display:flex; align-items:flex-start; gap:10px;">
+                        <i class="fas fa-info-circle" style="color:#1d4ed8; font-size:1rem; margin-top:2px; flex-shrink:0;"></i>
+                        <span style="color:#1e40af; font-size:0.88rem;">
+                            ระบบสำรองข้อมูลอัตโนมัติทุก <strong>24 ชั่วโมง</strong> และเก็บไว้ <strong>7 รายการ</strong>ล่าสุด
+                        </span>
+                    </div>
+                    <div id="autoBackupList"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== RATE LIMIT SETTINGS ===== -->
+        <section id="ratelimit" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-tachometer-alt"></i> ตั้งค่า Rate Limit</h3>
+                </div>
+                <div class="card-body">
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:12px 16px; margin-bottom:20px; display:flex; align-items:flex-start; gap:10px;">
+                        <i class="fas fa-exclamation-triangle" style="color:#d97706; font-size:1rem; margin-top:2px; flex-shrink:0;"></i>
+                        <span style="color:#92400e; font-size:0.88rem;">
+                            <strong>คำเตือน:</strong> การปิด Rate Limit อาจทำให้ระบบถูกโจมตีได้ง่าย (Brute Force / DDoS) แนะนำให้เปิดไว้เสมอ
+                        </span>
+                    </div>
+                    <div id="rateLimitList"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ORGANIZATIONS MANAGEMENT ===== -->
+        <section id="orgs" class="page-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-building"></i> จัดการหน่วยงาน</h3>
+                    <button class="btn btn-primary" onclick="openAddOrgModal()"><i class="fas fa-plus"></i> เพิ่มหน่วยงาน</button>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped table-hover" id="orgsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>รหัส</th>
+                                <th>ชื่อหน่วยงาน</th>
+                                <th>วันที่สร้าง</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===== CHANGE PASSWORD MODAL ===== -->
+    <div id="changePwModal" class="modal">
+        <div class="modal-content" style="width:400px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-key" style="color:var(--accent);"></i> เปลี่ยนรหัสผ่าน</h3>
+                <span class="close" onclick="closeModal('changePwModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>รหัสผ่านเดิม</label>
+                    <input type="password" id="pwOld" placeholder="ใส่รหัสเดิม">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>รหัสผ่านใหม่</label>
+                    <input type="password" id="pwNew" placeholder="ใส่รหัสใหม่ (อย่างน้อย 4 ตัว)">
+                </div>
+                <div class="form-group">
+                    <label>ยืนยันรหัสผ่านใหม่</label>
+                    <input type="password" id="pwConfirm" placeholder="ใส่รหัสใหม่อีกครั้ง">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('changePwModal')">ยกเลิก</button>
+                <button class="btn btn-success" onclick="doChangePassword()"><i class="fas fa-save"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ADD USER MODAL ===== -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content" style="width:420px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus" style="color:var(--accent);"></i> เพิ่มผู้ใช้งาน</h3>
+                <span class="close" onclick="closeModal('addUserModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>ชื่อผู้ใช้</label>
+                    <input type="text" id="newUsername" placeholder="ระบุชื่อผู้ใช้ (ภาษาอังกฤษ/ตัวเลข)">
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>รหัสผ่าน</label>
+                    <input type="password" id="newUserPw" placeholder="อย่างน้อย 6 ตัวอักษร">
+                </div>
+                <div class="form-group">
+                    <label>สิทธิ์</label>
+                    <select id="newUserRole" onchange="toggleNewUserOrgGroup()">
+                        <option value="user">user — เจ้าหน้าที่ทั่วไป</option>
+                        <option value="admin">admin — ผู้ดูแลระบบ</option>
+                    </select>
+                </div>
+                <div class="form-group" id="newUserOrgGroup" style="margin-top:14px;">
+                    <label>หน่วยงาน</label>
+                    <select id="newUserOrg">
+                        <option value="">-- เลือกหน่วยงาน --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addUserModal')">ยกเลิก</button>
+                <button class="btn btn-success" onclick="saveNewUser()"><i class="fas fa-save"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHANGE USER PASSWORD MODAL (admin) ===== -->
+    <div id="changeUserPwModal" class="modal">
+        <div class="modal-content" style="width:380px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-key" style="color:var(--accent);"></i> ตั้งรหัสผ่านใหม่</h3>
+                <span class="close" onclick="closeModal('changeUserPwModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="changeUserPwId">
+                <p style="color:var(--text-muted); margin-bottom:14px; font-size:0.9rem;">
+                    ผู้ใช้: <strong id="changeUserPwName"></strong>
+                </p>
+                <div class="form-group">
+                    <label>รหัสผ่านใหม่</label>
+                    <input type="password" id="changeUserPwNew" placeholder="อย่างน้อย 6 ตัวอักษร">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('changeUserPwModal')">ยกเลิก</button>
+                <button class="btn btn-success" onclick="doChangeUserPw()"><i class="fas fa-save"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SESSION WARNING MODAL ===== -->
+    <div id="sessionWarningModal" class="modal" style="z-index:4000;">
+        <div class="modal-content" style="width:400px;">
+            <div class="modal-header" style="background:#fffbeb; border-bottom:1px solid #fde68a;">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i> Session ใกล้หมดอายุ</h3>
+            </div>
+            <div class="modal-body" style="text-align:center; padding:28px 24px;">
+                <p style="font-size:1rem; margin-bottom:8px;">Session ของคุณจะหมดอายุในอีก <strong style="color:#dc2626;">5 นาที</strong></p>
+                <p style="color:var(--text-muted); font-size:0.9rem;">คลิก "ต่ออายุ" เพื่อใช้งานต่อโดยไม่ต้อง login ใหม่</p>
+            </div>
+            <div class="modal-footer" style="justify-content:center;">
+                <button class="btn btn-secondary" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
+                <button class="btn btn-success" onclick="extendSession()"><i class="fas fa-clock"></i> ต่ออายุ Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RESET CONFIRM MODAL (2-step) ===== -->
+    <div id="resetConfirmModal" class="modal">
+        <div class="modal-content" style="width:460px;">
+            <div class="modal-header" style="background:#fef2f2; border-bottom:1px solid #fecaca;">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i> ยืนยันการล้างข้อมูล</h3>
+                <span class="close" onclick="closeModal('resetConfirmModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:14px; margin-bottom:20px;">
+                    <p style="margin:0; color:#dc2626; font-weight:600;"><i class="fas fa-exclamation-circle"></i> การกระทำนี้ไม่สามารถย้อนกลับได้!</p>
+                    <p style="margin:6px 0 0; font-size:0.9rem; color:var(--text-muted);">เอกสารรับ-เบิกจ่ายทั้งหมดจะถูกลบถาวร (ทะเบียนวัสดุจะคงเดิม)</p>
+                </div>
+                <p style="font-size:0.95rem;">พิมพ์ข้อความด้านล่างเพื่อยืนยัน:</p>
+                <p style="background:#f7f8fa; border:1px solid var(--border); border-radius:6px; padding:10px; font-family:monospace; font-size:1.05rem; text-align:center; letter-spacing:1px; margin-bottom:14px; color:var(--primary); font-weight:700;">ยืนยันการลบ</p>
+                <div class="form-group">
+                    <input type="text" id="resetConfirmInput" placeholder='พิมพ์ "ยืนยันการลบ" ที่นี่' oninput="checkResetInput(this)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('resetConfirmModal')">ยกเลิก</button>
+                <button class="btn btn-danger" id="resetConfirmBtn" disabled onclick="doResetConfirmed()"><i class="fas fa-trash"></i> ล้างข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RESTORE PREVIEW MODAL ===== -->
+    <div id="restorePreviewModal" class="modal">
+        <div class="modal-content" style="width:560px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-upload" style="color:var(--accent);"></i> ตรวจสอบข้อมูลก่อน Import</h3>
+                <span class="close" onclick="closeModal('restorePreviewModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="restorePreviewContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('restorePreviewModal'); document.getElementById('fileRestore').value='';">ยกเลิก</button>
+                <button class="btn btn-success" id="restoreConfirmBtn" onclick="doRestoreConfirmed()"><i class="fas fa-check"></i> ยืนยัน Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== AUTO BACKUP RESTORE CONFIRM MODAL ===== -->
+    <div id="autoBackupRestoreModal" class="modal">
+        <div class="modal-content" style="width:480px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-history" style="color:var(--accent);"></i> ยืนยันกู้คืนข้อมูล</h3>
+                <span class="close" onclick="closeModal('autoBackupRestoreModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="autoBackupRestoreInfo" style="margin-bottom:16px;"></div>
+                <div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:6px; padding:12px 14px; display:flex; align-items:flex-start; gap:8px;">
+                    <i class="fas fa-exclamation-triangle" style="color:#b91c1c; font-size:0.95rem; margin-top:2px; flex-shrink:0;"></i>
+                    <span style="color:#7f1d1d; font-size:0.88rem;">ข้อมูลปัจจุบัน<strong>ทั้งหมดจะถูกแทนที่</strong> ระบบจะดาวน์โหลด snapshot ก่อนกู้คืนให้อัตโนมัติ</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('autoBackupRestoreModal')">ยกเลิก</button>
+                <button class="btn btn-danger" id="autoBackupRestoreBtn" onclick="doAutoBackupRestore()">
+                    <i class="fas fa-history"></i> ยืนยันกู้คืน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MASTER MODAL ===== -->
+    <div id="masterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="masterModalTitle">ข้อมูลวัสดุ</h3>
+                <span class="close" onclick="closeModal('masterModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mId">
+                <div class="form-row">
+                    <div class="form-group"><label>รหัสวัสดุ</label><input type="text" id="mCode" required></div>
+                    <div class="form-group flex-2"><label>ชื่อวัสดุ</label><input type="text" id="mName" required></div>
+                </div>
+                <div class="form-group"><label>คุณลักษณะ/สเปค</label><input type="text" id="mSpec"></div>
+                <div class="form-row">
+                    <div class="form-group flex-2"><label>ประเภท</label><select id="mCat"></select></div>
+                    <div class="form-group"><label>หน่วยนับ</label><input type="text" id="mUnit" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>จุดสั่งซื้อ (Min)</label><input type="number" id="mMin" value="0"></div>
+                    <div class="form-group"><label>ที่เก็บ</label><input type="text" id="mLoc"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('masterModal')">ยกเลิก</button>
+                <button class="btn btn-success" onclick="saveMaster()"><i class="fas fa-save"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PRINT MODAL ===== -->
+    <div id="printModal" class="modal">
+        <div class="modal-content print-modal-content">
+            <div class="modal-header no-print">
+                <h3>ตัวอย่างก่อนพิมพ์</h3>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> พิมพ์</button>
+                    <button class="btn btn-danger" onclick="closeModal('printModal')">ปิด</button>
+                </div>
+            </div>
+            <div id="printArea" class="print-area"></div>
+        </div>
+    </div>
+
+    <!-- ===== ADD/EDIT ORG MODAL ===== -->
+    <div id="orgModal" class="modal">
+        <div class="modal-content" style="width:460px;">
+            <div class="modal-header">
+                <h3 id="orgModalTitle"><i class="fas fa-building" style="color:var(--accent);"></i> เพิ่มหน่วยงาน</h3>
+                <span class="close" onclick="closeModal('orgModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="orgId">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>รหัสหน่วยงาน</label>
+                    <input type="text" id="orgCode" placeholder="เช่น SK0001">
+                </div>
+                <div class="form-group">
+                    <label>ชื่อหน่วยงาน</label>
+                    <input type="text" id="editOrgName" placeholder="ชื่อเต็มของหน่วยงาน">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('orgModal')">ยกเลิก</button>
+                <button class="btn btn-success" onclick="saveOrg()"><i class="fas fa-save"></i> บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIG & CONSTANTS (คงเดิม + เพิ่ม API_BASE)
+        // ============================================================
+        const API_BASE = '/api'; // เปลี่ยนเป็น URL เต็มถ้าใช้ cross-origin เช่น 'http://localhost:3000/api'
+        let USE_SQL = true; // จะถูกตรวจสอบอัตโนมัติ
+
+        // ============================================================
+        // AUTH
+        // ============================================================
+        let currentUser = null; // { id, username, role, org_id, org_name }
+        let currentAdminOrgFilter = null; // for admin: filter by org_id (null = all)
+
+        async function doLogout() {
+            if (!confirm('ต้องการออกจากระบบ?')) return;
+            try {
+                await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'same-origin' });
+            } catch(e) {}
+            window.location.href = '/login.html';
+        }
+
+        function openChangePwModal() {
+            document.getElementById('pwOld').value = '';
+            document.getElementById('pwNew').value = '';
+            document.getElementById('pwConfirm').value = '';
+            document.getElementById('changePwModal').style.display = 'flex';
+        }
+
+        async function doChangePassword() {
+            const oldPw = document.getElementById('pwOld').value;
+            const newPw = document.getElementById('pwNew').value;
+            const confirmPw = document.getElementById('pwConfirm').value;
+            if (!oldPw || !newPw) return alert('กรุณากรอกข้อมูลให้ครบ');
+            if (newPw.length < 6) return alert('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
+            if (newPw !== confirmPw) return alert('รหัสผ่านใหม่ไม่ตรงกัน');
+            try {
+                const data = await api('/change-password', { method: 'POST', body: { oldPassword: oldPw, newPassword: newPw } });
+                closeModal('changePwModal');
+                showToast('เปลี่ยนรหัสผ่านสำเร็จ');
+            } catch(e) { alert(e.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ'); }
+        }
+
+        const CATEGORIES = {
+            'A0000': 'วัสดุสำนักงาน', 'B0000': 'วัสดุไฟฟ้าและวิทยุ', 'C0000': 'วัสดุงานบ้านงานครัว',
+            'D0000': 'วัสดุก่อสร้าง', 'E0000': 'วัสดุยานพาหนะและขนส่ง', 'F0000': 'วัสดุวิทยาศาสตร์และการแพทย์',
+            'G0000': 'วัสดุการเกษตร', 'H0000': 'วัสดุเครื่องแต่งกาย', 'I0000': 'วัสดุกกีฬา',
+            'J0000': 'วัสดุคอมพิวเตอร์', 'K0000': 'วัสดุการศึกษา', 'L0000': 'วัสดุเครื่องดับเพลิง',
+            'M0000': 'วัสดุสนาม', 'N0000': 'วัสดุสำรวจ', 'O0000': 'วัสดุดนตรี',
+            'P0000': 'วัสดุจราจร', 'Q0000': 'วัสดุอื่น'
+        };
+
+        const DEPARTMENTS = [
+            'สำนักปลัด', 'กองคลัง', 'กองช่าง', 'กองสาธารณสุขและสิ่งแวดล้อม',
+            'กองยุทธศาสตร์และงบประมาณ', 'กองการศึกษา', 'กองสวัสดิการสังคม',
+            'กองการเจ้าหน้าที่', 'หน่วยตรวจสอบภายใน'
+        ];
+
+        // Cache สำหรับข้อมูลที่ใช้บ่อย
+        let cachedItems = [];
+        let cachedBalances = {};
+        let orgName = 'องค์การบริหารส่วนตำบลตัวอย่าง';
+        let cart = [];
+        let chartInstance = null;
+
+        // ============================================================
+        // API Helper Functions (ใหม่)
+        // ============================================================
+        async function api(endpoint, options = {}) {
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    ...options,
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
+                if (res.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'API Error');
+                resetActivityTimer(); // รีเซ็ต session inactivity timer ทุกครั้งที่ API call สำเร็จ
+                return data;
+            } catch (err) {
+                if (!err.message?.includes('login')) console.error(`API Error [${endpoint}]:`, err);
+                throw err;
+            }
+        }
+
+        function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+
+        // เพิ่ม filter_org_id param สำหรับ admin ที่เลือกกรองหน่วยงาน
+        function adminOrgParam(existingQs = '') {
+            if (currentUser && currentUser.role === 'admin' && currentAdminOrgFilter !== null) {
+                const sep = existingQs.includes('?') ? '&' : '?';
+                return `${existingQs}${sep}filter_org_id=${currentAdminOrgFilter}`;
+            }
+            return existingQs;
+        }
+
+        // ============================================================
+        // INIT (แก้ไขจาก sync เป็น async)
+        // ============================================================
+        window.onload = async () => {
+            // ตรวจสอบ session ผ่าน /api/me
+            try {
+                const res = await fetch(`${API_BASE}/me`, { credentials: 'same-origin' });
+                if (res.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                currentUser = data.user;
+                USE_SQL = true;
+                document.getElementById('dbBadge').textContent = 'SQL';
+                document.getElementById('dbBadge').className = 'db-badge sql';
+            } catch (e) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            startApp();
+        };
+
+        async function startApp() {
+            // แสดงข้อมูลผู้ใช้ใน header
+            if (currentUser) {
+                document.getElementById('headerUsername').textContent = currentUser.username;
+                const badge = document.getElementById('headerRoleBadge');
+                if (currentUser.role === 'admin') {
+                    badge.textContent = 'Admin';
+                    badge.style.cssText = 'background:#fef3c7; color:#92400e; font-size:0.72rem; padding:2px 7px; border-radius:10px; margin-left:6px;';
+                } else {
+                    badge.textContent = 'User';
+                    badge.style.cssText = 'background:#eff6ff; color:#1e40af; font-size:0.72rem; padding:2px 7px; border-radius:10px; margin-left:6px;';
+                }
+                // แสดงเมนู admin-only
+                if (currentUser.role === 'admin') {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+                }
+                // แสดงหน่วยงาน
+                if (currentUser.role === 'admin') {
+                    // Admin: แสดง dropdown เลือกหน่วยงาน
+                    document.getElementById('orgDisplayWrap').style.display = 'flex';
+                    document.getElementById('adminOrgFilter').style.display = 'inline-block';
+                    document.getElementById('orgDisplayText').textContent = 'หน่วยงาน:';
+                    // Load org list for dropdown
+                    loadAdminOrgDropdown();
+                } else if (currentUser.org_name) {
+                    // User: แสดงชื่อหน่วยงาน
+                    document.getElementById('orgDisplayWrap').style.display = 'flex';
+                    document.getElementById('orgDisplayText').textContent = currentUser.org_name;
+                }
+            }
+            startSessionTimer();
+            await initUI();
+            await renderDashboard();
+        }
+
+        async function initUI() {
+            // Populate Category Dropdowns
+            const catSelect = document.getElementById('mCat');
+            const filterSelect = document.getElementById('repCatFilter');
+            Object.entries(CATEGORIES).forEach(([code, name]) => {
+                const opt = `<option value="${code}">${code} ${name}</option>`;
+                catSelect.innerHTML += opt;
+                filterSelect.innerHTML += opt;
+            });
+
+            const deptDL = document.getElementById('dlDepts');
+            DEPARTMENTS.forEach(d => deptDL.innerHTML += `<option value="${d}">`);
+
+            document.getElementById('txDate').valueAsDate = new Date();
+            document.getElementById('repDate').valueAsDate = new Date();
+
+            // โหลดชื่อหน่วยงาน
+            if (USE_SQL) {
+                try {
+                    const settings = await api('/settings');
+                    orgName = settings.data.orgName || orgName;
+                } catch (e) {}
+            }
+            document.getElementById('orgNameInput').value = orgName;
+
+            // โหลด items cache
+            await refreshItemsCache();
+        }
+
+        // ============================================================
+        // CACHE MANAGEMENT (ใหม่)
+        // ============================================================
+        async function refreshItemsCache() {
+            if (USE_SQL) {
+                try {
+                    const res = await api(adminOrgParam('/items'));
+                    cachedItems = res.data;
+                    const balRes = await api(adminOrgParam('/balance-all'));
+                    cachedBalances = balRes.data;
+                } catch (e) {
+                    console.error('Cache refresh failed:', e);
+                }
+            }
+        }
+
+        function getBal(itemId) {
+            return cachedBalances[itemId] || 0;
+        }
+
+        // ============================================================
+        // HELPERS (คงเดิม)
+        // ============================================================
+        function getFiscalYear(dateStr) {
+            const d = new Date(dateStr);
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const fy = (month >= 10) ? year + 1 : year;
+            return fy + 543;
+        }
+
+        function getThaiDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const months = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()+543}`;
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.style.display = 'flex';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        // ============================================================
+        // NAVIGATION (คงเดิม)
+        // ============================================================
+        function nav(pageId, el) {
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            if (el) el.classList.add('active');
+            document.getElementById('pageTitle').innerText = el ? el.innerText.trim() : 'System';
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('active');
+
+            if (pageId === 'dashboard') renderDashboard();
+            if (pageId === 'transaction') { resetTxForm(); renderTxHistory(); }
+            if (pageId === 'master') renderMaster();
+            if (pageId === 'users') renderUsers();
+            if (pageId === 'auditlog') renderAuditLog(1);
+            if (pageId === 'ratelimit') renderRateLimit();
+            if (pageId === 'autobackup') renderAutoBackups();
+            if (pageId === 'orgs') renderOrgs();
+            if (pageId === 'annual-report') initAnnualReportFilters();
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // ============================================================
+        // DASHBOARD (แก้ไขเป็น async + API)
+        // ============================================================
+        async function renderDashboard() {
+            const ctx = document.getElementById('catChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            if (USE_SQL) {
+                try {
+                    const res = await api(adminOrgParam('/dashboard'));
+                    const d = res.data;
+
+                    document.getElementById('d-totalItems').innerText = d.totalItems;
+                    document.getElementById('d-totalValue').innerText = d.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                    document.getElementById('d-lowStock').innerText = d.lowStock.length;
+                    document.getElementById('d-totalDocs').innerText = d.docsThisYear;
+
+                    let lowHtml = '';
+                    d.lowStock.forEach(ls => {
+                        lowHtml += `<tr><td>${ls.name}</td><td style="color:red;font-weight:bold;text-align:center">${ls.balance}</td><td style="text-align:center">${ls.min}</td></tr>`;
+                    });
+                    document.getElementById('lowStockTable').querySelector('tbody').innerHTML = lowHtml || '<tr><td colspan="3" class="text-center">ไม่มีรายการแจ้งเตือน</td></tr>';
+
+                    chartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(d.catValue),
+                            datasets: [{ label: 'มูลค่า (บาท)', data: Object.values(d.catValue), backgroundColor: '#3498db' }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                } catch (e) {
+                    console.error('Dashboard error:', e);
+                }
+            }
+        }
+
+        // ============================================================
+        // MASTER (แก้ไขเป็น async + API)
+        // ============================================================
+        let masterSearchTimer = null;
+        function debounceRenderMaster() {
+            clearTimeout(masterSearchTimer);
+            masterSearchTimer = setTimeout(() => renderMaster(), 300);
+        }
+
+        async function renderMaster() {
+            const tbody = document.querySelector('#masterTable tbody');
+            const keyword = document.getElementById('searchMaster').value.trim();
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">กำลังโหลด...</td></tr>';
+
+            if (USE_SQL) {
+                try {
+                    const params = new URLSearchParams();
+                    if (keyword) params.set('search', keyword);
+                    if (!keyword) params.set('limit', '50');
+                    
+                    const res = await api(adminOrgParam(`/items?${params}`));
+                    const balRes = await api(adminOrgParam('/balance-all'));
+                    cachedBalances = balRes.data;
+
+                    tbody.innerHTML = '';
+                    res.data.forEach(i => {
+                        const bal = cachedBalances[i.id] || 0;
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${i.code}</td>
+                                <td>${i.name} <span style="color:#777;font-size:0.9em">${i.spec || ''}</span></td>
+                                <td>${i.cat_name}</td>
+                                <td>${i.unit}</td>
+                                <td class="text-center" style="font-weight:bold; color:${bal <= i.min_qty ? 'red' : 'green'}">${bal}</td>
+                                <td class="text-right">${(i.last_price || 0).toFixed(2)}</td>
+                                <td class="text-center">
+                                    <button class="btn-secondary" style="padding:5px 10px;" onclick="editMaster(${i.id})"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-primary" style="padding:5px 10px;" onclick="printStockCard(${i.id})"><i class="fas fa-print"></i></button>
+                                </td>
+                            </tr>`;
+                    });
+                    if (!keyword && res.total > 50) {
+                        tbody.innerHTML += `<tr><td colspan="7" class="text-center text-muted">...แสดง 50 รายการ จาก ${res.total} (ค้นหาเพื่อดูเพิ่ม)...</td></tr>`;
+                    }
+                } catch (e) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="color:red">โหลดข้อมูลผิดพลาด: ${e.message}</td></tr>`;
+                }
+            }
+        }
+
+        function openMasterModal(id = null) {
+            document.getElementById('mId').value = id || '';
+            document.getElementById('mCode').value = '';
+            document.getElementById('mName').value = '';
+            document.getElementById('mSpec').value = '';
+            document.getElementById('mUnit').value = '';
+            document.getElementById('mMin').value = 5;
+            document.getElementById('mLoc').value = 'กองพัสดุ';
+            document.getElementById('masterModalTitle').textContent = id ? 'แก้ไขวัสดุ' : 'เพิ่มวัสดุใหม่';
+            document.getElementById('masterModal').style.display = 'flex';
+        }
+
+        async function editMaster(id) {
+            if (USE_SQL) {
+                try {
+                    const res = await api(`/items/${id}`);
+                    const i = res.data;
+                    document.getElementById('mId').value = i.id;
+                    document.getElementById('mCode').value = i.code;
+                    document.getElementById('mName').value = i.name;
+                    document.getElementById('mSpec').value = i.spec;
+                    document.getElementById('mCat').value = i.cat_code;
+                    document.getElementById('mUnit').value = i.unit;
+                    document.getElementById('mMin').value = i.min_qty;
+                    document.getElementById('mLoc').value = i.location;
+                    document.getElementById('masterModalTitle').textContent = 'แก้ไขวัสดุ';
+                    document.getElementById('masterModal').style.display = 'flex';
+                } catch (e) {
+                    alert('โหลดข้อมูลผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        async function saveMaster() {
+            const id = document.getElementById('mId').value;
+            const catCode = document.getElementById('mCat').value;
+            const data = {
+                code: document.getElementById('mCode').value.trim(),
+                name: document.getElementById('mName').value.trim(),
+                spec: document.getElementById('mSpec').value.trim() || '-',
+                cat_code: catCode,
+                cat_name: CATEGORIES[catCode] || 'อื่นๆ',
+                unit: document.getElementById('mUnit').value.trim(),
+                min_qty: parseInt(document.getElementById('mMin').value) || 5,
+                location: document.getElementById('mLoc').value.trim() || 'กองพัสดุ',
+                last_price: 0
+            };
+
+            if (!data.code || !data.name || !data.unit) {
+                return alert('กรุณากรอกข้อมูลให้ครบ (รหัส, ชื่อ, หน่วยนับ)');
+            }
+
+            if (USE_SQL) {
+                try {
+                    showLoading();
+                    if (id) {
+                        // แก้ไข
+                        const existing = await api(`/items/${id}`);
+                        data.last_price = existing.data.last_price;
+                        await api(`/items/${id}`, { method: 'PUT', body: data });
+                    } else {
+                        // เพิ่มใหม่
+                        await api('/items', { method: 'POST', body: data });
+                    }
+                    hideLoading();
+                    closeModal('masterModal');
+                    showToast('บันทึกวัสดุสำเร็จ');
+                    await refreshItemsCache();
+                    renderMaster();
+                } catch (e) {
+                    hideLoading();
+                    alert('บันทึกผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        // ============================================================
+        // TRANSACTION (แก้ไขเป็น async + API)
+        // ============================================================
+        function toggleTxType() {
+            const type = document.getElementById('txType').value;
+            document.getElementById('grpPrice').style.display = (type === 'IN') ? 'block' : 'none';
+            document.getElementById('lblRef').innerText = (type === 'IN') ? 'รับจาก (ร้านค้า/บริษัท)' : 'เบิกโดย (กอง/ฝ่าย)';
+            genDocNo();
+            updateDataList();
+        }
+
+        async function genDocNo() {
+            const date = document.getElementById('txDate').value;
+            const type = document.getElementById('txType').value;
+            if (USE_SQL && date) {
+                try {
+                    const res = await api(`/next-docno?type=${type}&date=${date}`);
+                    document.getElementById('txDocNo').value = res.docNo;
+                } catch (e) {
+                    // Fallback: สร้างเลขเอง
+                    const fy = getFiscalYear(date);
+                    document.getElementById('txDocNo').value = `${type}-0001/${String(fy).slice(-2)}`;
+                }
+            }
+        }
+
+        async function updateDataList() {
+            const dl = document.getElementById('dlItems');
+            dl.innerHTML = '';
+            
+            if (USE_SQL) {
+                await refreshItemsCache();
+                cachedItems.forEach(i => {
+                    const bal = cachedBalances[i.id] || 0;
+                    dl.innerHTML += `<option value="${i.code} : ${i.name}">คงเหลือ ${bal} ${i.unit}</option>`;
+                });
+            }
+        }
+
+        function selectCartItem() {
+            const val = document.getElementById('cartItemInput').value;
+            const code = val.split(':')[0].trim();
+            const item = cachedItems.find(i => i.code === code);
+            if (item) {
+                document.getElementById('cartItemId').value = item.id;
+                document.getElementById('cartBal').value = cachedBalances[item.id] || 0;
+                document.getElementById('cartPrice').value = item.last_price || 0;
+            }
+        }
+
+        function addToCart() {
+            const itemId = document.getElementById('cartItemId').value;
+            if (!itemId) return alert('กรุณาเลือกวัสดุ');
+            const item = cachedItems.find(i => i.id == itemId);
+            if (!item) return alert('ไม่พบวัสดุ');
+            const qty = parseFloat(document.getElementById('cartQty').value);
+            const price = parseFloat(document.getElementById('cartPrice').value) || 0;
+
+            if (qty <= 0) return alert('จำนวนต้องมากกว่า 0');
+            const currentBal = cachedBalances[item.id] || 0;
+            if (document.getElementById('txType').value === 'OUT') {
+                const cartQtyForItem = cart.filter(c => c.itemId == itemId).reduce((a, b) => a + b.qty, 0);
+                if ((qty + cartQtyForItem) > currentBal) return alert('ยอดคงเหลือไม่พอ');
+            }
+
+            cart.push({
+                itemId: item.id, code: item.code, name: item.name,
+                spec: item.spec, unit: item.unit, qty: qty, price: price
+            });
+            renderCart();
+            document.getElementById('cartItemInput').value = '';
+            document.getElementById('cartItemId').value = '';
+            document.getElementById('cartQty').value = 1;
+        }
+
+        function renderCart() {
+            const tb = document.querySelector('#cartTable tbody');
+            tb.innerHTML = '';
+            cart.forEach((c, idx) => {
+                tb.innerHTML += `<tr><td>${idx + 1}</td><td>${c.code}</td><td>${c.name}</td><td class="text-right">${c.price.toFixed(2)}</td><td class="text-center">${c.qty}</td><td class="text-right">${(c.qty * c.price).toFixed(2)}</td><td class="text-center"><button class="btn-danger" style="padding:2px 8px;" onclick="cart.splice(${idx},1);renderCart()">&times;</button></td></tr>`;
+            });
+        }
+
+        async function saveTransaction() {
+            if (cart.length === 0) return alert('ไม่มีรายการ');
+            const type = document.getElementById('txType').value;
+            const txData = {
+                date: document.getElementById('txDate').value,
+                type: type,
+                doc_no: document.getElementById('txDocNo').value,
+                ref: document.getElementById('txRef').value,
+                note: document.getElementById('txNote').value,
+                user_name: document.getElementById('txUser').value,
+                approver: document.getElementById('txApprover').value,
+                checker: document.getElementById('txChecker').value,
+                lines: cart.map(c => ({
+                    item_id: c.itemId,
+                    code: c.code,
+                    name: c.name,
+                    spec: c.spec,
+                    unit: c.unit,
+                    qty: c.qty,
+                    price: c.price
+                }))
+            };
+
+            if (USE_SQL) {
+                try {
+                    showLoading();
+                    const res = await api('/transactions', { method: 'POST', body: txData });
+                    hideLoading();
+                    showToast('บันทึกเอกสารสำเร็จ');
+
+                    await refreshItemsCache();
+
+                    if (confirm('บันทึกแล้ว ต้องการพิมพ์เอกสารหรือไม่?')) {
+                        if (type === 'IN') printReceivingSlip(res.id);
+                        else printWithdrawSlip(res.id);
+                    }
+                    resetTxForm();
+                    renderTxHistory();
+                } catch (e) {
+                    hideLoading();
+                    alert('บันทึกผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        async function resetTxForm() {
+            cart = [];
+            renderCart();
+            await genDocNo();
+            await updateDataList();
+            document.getElementById('txRef').value = '';
+            document.getElementById('txNote').value = '';
+            document.getElementById('cartItemInput').value = '';
+        }
+
+        async function renderTxHistory() {
+            const tb = document.querySelector('#txHistoryTable tbody');
+            tb.innerHTML = '<tr><td colspan="6" class="text-center">กำลังโหลด...</td></tr>';
+
+            if (USE_SQL) {
+                try {
+                    const res = await api(adminOrgParam('/transactions?limit=10'));
+                    tb.innerHTML = '';
+                    res.data.forEach(t => {
+                        tb.innerHTML += `
+                            <tr>
+                                <td>${getThaiDate(t.date)}</td>
+                                <td>${t.doc_no}</td>
+                                <td><span style="color:${t.type == 'IN' ? 'green' : 'red'}">${t.type}</span></td>
+                                <td>${t.ref}</td>
+                                <td>${t.lines.length}</td>
+                                <td>
+                                    <button class="btn-secondary" onclick="${t.type == 'IN' ? 'printReceivingSlip' : 'printWithdrawSlip'}(${t.id})"><i class="fas fa-print"></i></button>
+                                    <button class="btn-danger" onclick="deleteTx(${t.id})"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>`;
+                    });
+                    if (res.data.length === 0) {
+                        tb.innerHTML = '<tr><td colspan="6" class="text-center">ยังไม่มีเอกสาร</td></tr>';
+                    }
+                } catch (e) {
+                    tb.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red">${e.message}</td></tr>`;
+                }
+            }
+        }
+
+        async function deleteTx(id) {
+            if (confirm('ยืนยันลบเอกสาร?')) {
+                try {
+                    await api(`/transactions/${id}`, { method: 'DELETE' });
+                    showToast('ลบเอกสารสำเร็จ');
+                    await refreshItemsCache();
+                    renderTxHistory();
+                } catch (e) {
+                    alert('ลบผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        // ============================================================
+        // SETTINGS
+        // ============================================================
+        async function updateOrgName() {
+            orgName = document.getElementById('orgNameInput').value;
+            if (USE_SQL) {
+                try {
+                    await api('/settings/orgName', { method: 'PUT', body: { value: orgName } });
+                    showToast('บันทึกชื่อหน่วยงานสำเร็จ');
+                } catch (e) {}
+            }
+        }
+
+        // ============================================================
+        // PRINTING (แก้ไขเป็น async + API)
+        // ============================================================
+        function openPrint(html) {
+            document.getElementById('printArea').innerHTML = html;
+            document.getElementById('printModal').style.display = 'flex';
+        }
+
+        async function printWithdrawSlip(txId) {
+            try {
+                const res = await api(`/transactions/${txId}`);
+                const tx = res.data;
+                let rows = '';
+                tx.lines.forEach((l, i) => {
+                    rows += `<tr><td class="text-center">${i + 1}</td><td>${l.name}</td><td class="text-center">${l.qty}</td><td class="text-center">${l.unit}</td><td></td></tr>`;
+                });
+                const html = `
+                    <div class="doc-header">${orgName}<br>ใบเบิกพัสดุ</div>
+                    <div class="doc-sub"><div style="flex:1"></div><div style="text-align:right">เลขที่ ${tx.doc_no}<br>กอง/ฝ่าย ${tx.ref}<br>วันที่ ${getThaiDate(tx.date)}</div></div>
+                    <p>ข้าพเจ้าขอเบิกพัสดุตามรายการต่อไปนี้เพื่อใช้ในงาน................................................................................</p>
+                    <table class="print-table"><thead><tr><th width="10%">ลำดับ</th><th width="50%">รายการ</th><th width="15%">จำนวนขอเบิก</th><th width="10%">หน่วยนับ</th><th width="15%">หมายเหตุ</th></tr></thead><tbody>${rows}</tbody></table>
+                    <table class="sign-table">
+                        <tr>
+                            <td><div class="sign-line">ลงชื่อ.........................................ผู้เบิก</div>(${tx.user_name || '.........................................'})<br>วันที่....../....../......</td>
+                            <td><div class="sign-line">ลงชื่อ.........................................ผู้จ่ายพัสดุ</div>(.........................................)<br>เจ้าหน้าที่<br>วันที่....../....../......</td>
+                        </tr>
+                        <tr>
+                            <td><div class="sign-caption">ตรวจสอบถูกต้องแล้ว</div><div class="sign-line">ลงชื่อ.........................................ผู้สั่งจ่าย</div>(${tx.approver || '.........................................'})<br>หัวหน้าเจ้าหน้าที่<br>วันที่....../....../......</td>
+                            <td><div class="sign-line" style="margin-top:55px">ลงชื่อ.........................................ผู้ตรวจสอบ</div>(${tx.checker || '.........................................'})<br>หัวหน้าเจ้าหน้าที่<br>วันที่....../....../......</td>
+                        </tr>
+                    </table>`;
+                openPrint(html);
+            } catch (e) {
+                alert('โหลดเอกสารผิดพลาด: ' + e.message);
+            }
+        }
+
+        async function printReceivingSlip(txId) {
+            try {
+                const res = await api(`/transactions/${txId}`);
+                const tx = res.data;
+                let rows = '', total = 0;
+                tx.lines.forEach((l, i) => {
+                    const sum = l.qty * l.price; total += sum;
+                    rows += `<tr><td class="text-center">${i + 1}</td><td>${l.name}</td><td class="text-center">${l.qty}</td><td class="text-right">${l.price.toLocaleString()}</td><td class="text-right">${sum.toLocaleString()}</td><td class="text-center">${l.unit}</td><td></td></tr>`;
+                });
+                const html = `
+                    <div class="doc-header">${orgName}<br>ใบรับพัสดุ</div>
+                    <div class="doc-sub"><div style="flex:1">รายการรับพัสดุตามรายการดังต่อไปนี้</div><div style="text-align:right">เลขที่ ${tx.doc_no}<br>รับจาก ${tx.ref}<br>วันที่ ${getThaiDate(tx.date)}</div></div>
+                    <table class="print-table"><thead><tr><th width="5%">ลำดับ</th><th width="35%">รายการ</th><th width="10%">จำนวน</th><th width="15%">ราคา/หน่วย</th><th width="15%">รวมเงิน</th><th width="10%">หน่วย</th><th width="10%">หมายเหตุ</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="4" class="text-right"><b>รวมทั้งสิ้น</b></td><td class="text-right"><b>${total.toLocaleString()}</b></td><td colspan="2"></td></tr></tfoot></table>
+                    <table class="sign-table noborders" style="margin-top:30px; border:none;">
+                        <tr>
+                            <td style="border:none!important"><br>ลงชื่อ.........................................ผู้รับพัสดุ<br>(${tx.user_name || '.........................................'})<br>เจ้าหน้าที่</td>
+                            <td style="border:none!important"><br>ลงชื่อ.........................................<br>(${tx.approver || '.........................................'})<br>หัวหน้าเจ้าหน้าที่</td>
+                        </tr>
+                        <tr><td colspan="2" style="border:none!important; text-align:right; padding-right:50px;"><br>ลงชื่อ.........................................ผู้ตรวจสอบ<br>(${tx.checker || '.........................................'})</td></tr>
+                    </table>`;
+                openPrint(html);
+            } catch (e) {
+                alert('โหลดเอกสารผิดพลาด: ' + e.message);
+            }
+        }
+
+        async function genReport() {
+            const dateLimit = document.getElementById('repDate').value;
+            const filter = document.getElementById('repCatFilter').value;
+
+            if (USE_SQL) {
+                try {
+                    const params = new URLSearchParams();
+                    if (dateLimit) params.set('dateLimit', dateLimit);
+                    if (filter) params.set('cat', filter);
+                    
+                    const res = await api(`/report?${params}`);
+                    const items = res.data;
+
+                    let html = `<div class="doc-header">รายการวัสดุคงเหลือ<br>ณ วันที่ ${getThaiDate(dateLimit)}<br><span style="font-size:14pt">${orgName}</span></div>
+                    <div class="doc-sub">แบบ อปท.วส</div>
+                    <table class="print-table"><thead><tr><th>ลำดับ</th><th>ประเภท</th><th>รายการ</th><th>จำนวน</th><th>ราคา</th><th>รวมเงิน</th><th>หมายเหตุ</th></tr></thead><tbody>`;
+
+                    let seq = 1, gTotal = 0;
+                    items.forEach(i => {
+                        gTotal += i.total_value;
+                        html += `<tr><td class="text-center">${seq++}</td><td>${i.cat_name}</td><td>${i.name}</td><td class="text-center">${i.balance}</td><td class="text-right">${i.last_price.toFixed(2)}</td><td class="text-right">${i.total_value.toFixed(2)}</td><td></td></tr>`;
+                    });
+
+                    html += `<tr><td colspan="5" class="text-center"><b>รวม</b></td><td class="text-right"><b>${gTotal.toFixed(2)}</b></td><td></td></tr></tbody></table>
+                    <div style="display:flex; justify-content:space-between; margin-top:30px; text-align:center">
+                        <div style="width:30%"><br>(ลงชื่อ)...........................ผู้จัดทำ<br>(.................................)<br>เจ้าหน้าที่</div>
+                        <div style="width:30%"><br>(ลงชื่อ)...........................<br>(.................................)<br>หัวหน้าเจ้าหน้าที่</div>
+                        <div style="width:30%"><br>(ลงชื่อ)...........................<br>(.................................)<br>นายกองค์การบริหารส่วนตำบล</div>
+                    </div>`;
+                    openPrint(html);
+                } catch (e) {
+                    alert('สร้างรายงานผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        async function printStockCard(itemId) {
+            if (USE_SQL) {
+                try {
+                    const res = await api(`/stockcard/${itemId}`);
+                    const item = res.item;
+                    const movements = res.movements;
+
+                    let rows = `<tr><td></td><td>ยอดยกมา</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+                    movements.forEach(m => {
+                        rows += `<tr><td class="text-center">${getThaiDate(m.date)}</td><td>${m.ref}</td><td class="text-center">${m.doc_no}</td><td class="text-right">${m.type == 'IN' ? m.price.toFixed(2) : ''}</td><td class="text-center">${m.type == 'IN' ? m.qty : ''}</td><td class="text-center">${m.type == 'OUT' ? m.qty : ''}</td><td class="text-center"><b>${m.balance}</b></td><td>${m.note || ''}</td></tr>`;
+                    });
+
+                    const html = `
+                        <div style="display:flex;justify-content:space-between"><div><b>บัญชีวัสดุ</b></div><div>รหัส ${item.code}</div></div>
+                        <div style="border:1px solid black; padding:10px; margin:5px 0;">
+                            <div style="display:flex; justify-content:space-between"><div style="width:33%">ประเภท: ${item.cat_name}</div><div style="width:33%">ชื่อ: ${item.name}</div><div style="width:33%">หน่วยนับ: ${item.unit}</div></div>
+                            <div style="display:flex; justify-content:space-between"><div style="width:33%">ขนาด/ลักษณะ: ${item.spec}</div><div style="width:33%">ที่เก็บ: ${item.location}</div><div style="width:33%">Min: ${item.min_qty}</div></div>
+                        </div>
+                        <table class="print-table">
+                            <thead>
+                                <tr><th rowspan="2">วัน เดือน ปี</th><th rowspan="2">รับจาก / จ่ายให้</th><th rowspan="2">เลขที่</th><th rowspan="2">ราคา</th><th colspan="3">จำนวน</th><th rowspan="2">หมายเหตุ</th></tr>
+                                <tr><th>รับ</th><th>จ่าย</th><th>คงเหลือ</th></tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                    openPrint(html);
+                } catch (e) {
+                    alert('โหลดบัญชีวัสดุผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        // ============================================================
+        // BACKUP / RESTORE / RESET (แก้ไขเป็น async + API)
+        // ============================================================
+        async function backupData() {
+            if (USE_SQL) {
+                try {
+                    showLoading();
+                    const res = await api('/backup');
+                    hideLoading();
+                    const a = document.createElement('a');
+                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res.data));
+                    a.download = `stock_backup_sql_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    showToast('สำรองข้อมูลสำเร็จ');
+                } catch (e) {
+                    hideLoading();
+                    alert('สำรองข้อมูลผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        // ข้อมูลไฟล์ restore ที่รอการยืนยัน
+        let pendingRestoreData = null;
+
+        function restoreData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const r = new FileReader();
+            r.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    // แสดง preview ก่อน
+                    pendingRestoreData = data;
+                    const itemCount    = data.items ? data.items.length : 0;
+                    const txCount      = data.transactions ? data.transactions.length : 0;
+                    const lineCount    = data.transaction_lines ? data.transaction_lines.length : 0;
+                    const exportDate   = data.exportDate ? new Date(data.exportDate).toLocaleString('th-TH') : 'ไม่ทราบ';
+                    document.getElementById('restorePreviewContent').innerHTML = `
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:14px; margin-bottom:16px;">
+                            <p style="margin:0 0 4px; font-weight:600; color:#1e40af;"><i class="fas fa-file-archive"></i> ข้อมูลในไฟล์ ${file.name}</p>
+                            <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">Exported: ${exportDate} | Version: ${data.version || 'N/A'}</p>
+                        </div>
+                        <table class="table table-striped" style="font-size:0.9rem;">
+                            <thead><tr><th>ประเภทข้อมูล</th><th class="text-right">จำนวน</th></tr></thead>
+                            <tbody>
+                                <tr><td><i class="fas fa-box" style="color:var(--info);"></i> ทะเบียนวัสดุ</td><td class="text-right"><strong>${itemCount.toLocaleString()}</strong></td></tr>
+                                <tr><td><i class="fas fa-file-alt" style="color:var(--success);"></i> เอกสาร (รับ/เบิก)</td><td class="text-right"><strong>${txCount.toLocaleString()}</strong></td></tr>
+                                <tr><td><i class="fas fa-list" style="color:var(--warning);"></i> รายการในเอกสาร</td><td class="text-right"><strong>${lineCount.toLocaleString()}</strong></td></tr>
+                            </tbody>
+                        </table>
+                        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:12px; margin-top:14px;">
+                            <p style="margin:0; color:#92400e; font-size:0.9rem;"><i class="fas fa-exclamation-triangle"></i>
+                                <strong>ข้อมูลปัจจุบันในระบบจะถูกแทนที่</strong> — ระบบจะสำรองข้อมูลเดิมให้อัตโนมัติ และส่งกลับให้ดาวน์โหลด</p>
+                        </div>`;
+                    document.getElementById('restorePreviewModal').style.display = 'flex';
+                    input.value = '';
+                } catch (err) {
+                    alert('ไฟล์ไม่ถูกต้อง: ' + err.message);
+                    input.value = '';
+                }
+            };
+            r.readAsText(file);
+        }
+
+        async function doRestoreConfirmed() {
+            if (!pendingRestoreData) return;
+            closeModal('restorePreviewModal');
+            try {
+                showLoading();
+                const res = await api('/restore', { method: 'POST', body: { data: pendingRestoreData } });
+                hideLoading();
+                pendingRestoreData = null;
+                showToast('นำเข้าข้อมูลสำเร็จ');
+                // ดาวน์โหลด auto-backup
+                if (res.autoBackup) {
+                    const a = document.createElement('a');
+                    const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.autoBackup, null, 2));
+                    a.download = `auto_backup_before_restore_${dateStr}.json`;
+                    a.click();
+                }
+                await refreshItemsCache();
+                renderDashboard();
+            } catch (e) {
+                hideLoading();
+                pendingRestoreData = null;
+                alert('นำเข้าข้อมูลผิดพลาด: ' + e.message);
+            }
+        }
+
+        function resetData() {
+            // เปิด modal ยืนยัน 2 ขั้นตอน
+            document.getElementById('resetConfirmInput').value = '';
+            document.getElementById('resetConfirmBtn').disabled = true;
+            document.getElementById('resetConfirmModal').style.display = 'flex';
+        }
+
+        function checkResetInput(input) {
+            document.getElementById('resetConfirmBtn').disabled = (input.value !== 'ยืนยันการลบ');
+        }
+
+        async function doResetConfirmed() {
+            const confirmText = document.getElementById('resetConfirmInput').value;
+            if (confirmText !== 'ยืนยันการลบ') return;
+            closeModal('resetConfirmModal');
+            if (USE_SQL) {
+                try {
+                    showLoading();
+                    await api('/reset', { method: 'POST', body: { confirm_text: 'ยืนยันการลบ' } });
+                    hideLoading();
+                    showToast('ล้างข้อมูลเอกสารสำเร็จ');
+                    await refreshItemsCache();
+                    renderDashboard();
+                } catch (e) {
+                    hideLoading();
+                    alert('ล้างข้อมูลผิดพลาด: ' + e.message);
+                }
+            }
+        }
+
+        // ============================================================
+        // USER MANAGEMENT (Admin only)
+        // ============================================================
+        async function renderUsers() {
+            const tbody = document.querySelector('#usersTable tbody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">กำลังโหลด...</td></tr>';
+            try {
+                const res = await api('/users');
+                tbody.innerHTML = '';
+                res.data.forEach(u => {
+                    const isMe = currentUser && u.id === currentUser.id;
+                    const roleBadge = u.role === 'admin'
+                        ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:0.8rem;">Admin</span>'
+                        : '<span style="background:#eff6ff;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:0.8rem;">User</span>';
+                    const createdDate = new Date(u.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${u.id}</td>
+                            <td><strong>${u.username}</strong> ${isMe ? '<span style="font-size:0.75rem;color:var(--text-muted)">(คุณ)</span>' : ''}</td>
+                            <td>${roleBadge}</td>
+                            <td>${u.org_name ? u.org_name : '<span style="color:var(--text-muted)">ทั้งหมด</span>'}</td>
+                            <td>${createdDate}</td>
+                            <td class="text-center">
+                                <button class="btn-secondary" onclick="openChangeUserPwModal(${u.id},'${u.username}')" title="เปลี่ยนรหัสผ่าน">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                ${!isMe ? `<button class="btn-danger" onclick="deleteUser(${u.id},'${u.username}')" title="ลบ" style="margin-left:4px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>` : ''}
+                            </td>
+                        </tr>`;
+                });
+                if (res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">ไม่มีผู้ใช้</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:red" class="text-center">${e.message}</td></tr>`;
+            }
+        }
+
+        function openAddUserModal() {
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newUserPw').value = '';
+            document.getElementById('newUserRole').value = 'user';
+            document.getElementById('newUserOrg').value = '';
+            document.getElementById('newUserOrgGroup').style.display = 'block';
+            document.getElementById('addUserModal').style.display = 'flex';
+        }
+
+        async function saveNewUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newUserPw').value;
+            const role = document.getElementById('newUserRole').value;
+            const orgId = document.getElementById('newUserOrg').value;
+            if (!username || !password) return alert('กรุณากรอกข้อมูลให้ครบ');
+            try {
+                await api('/users', { method: 'POST', body: { username, password, role, org_id: orgId || null } });
+                closeModal('addUserModal');
+                showToast('เพิ่มผู้ใช้สำเร็จ');
+                renderUsers();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function deleteUser(id, username) {
+            if (!confirm(`ยืนยันลบผู้ใช้ "${username}" ?`)) return;
+            try {
+                await api(`/users/${id}`, { method: 'DELETE' });
+                showToast('ลบผู้ใช้สำเร็จ');
+                renderUsers();
+            } catch (e) { alert(e.message); }
+        }
+
+        function toggleNewUserOrgGroup() {
+            const role = document.getElementById('newUserRole').value;
+            document.getElementById('newUserOrgGroup').style.display = role === 'admin' ? 'none' : 'block';
+        }
+
+        // ============================================================
+        // ============================================================
+        // ANNUAL REPORT — รับ-จ่ายพัสดุประจำปีงบประมาณ
+        // ============================================================
+
+        async function initAnnualReportFilters() {
+            // ปีงบประมาณ dropdown 2567-2575
+            const sel = document.getElementById('arFiscalYear');
+            if (sel.options.length <= 1) { // โหลดครั้งเดียว
+                const now = new Date();
+                const currentFY = now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0);
+                sel.innerHTML = '';
+                for (let y = 2567; y <= 2575; y++) {
+                    sel.innerHTML += `<option value="${y}" ${y === currentFY ? 'selected' : ''}>${y}</option>`;
+                }
+            }
+            // ประเภทวัสดุ (โหลดครั้งเดียว)
+            const catSel = document.getElementById('arCategory');
+            if (catSel.options.length <= 1) {
+                try {
+                    const res = await api('/categories');
+                    res.data.forEach(c => {
+                        catSel.innerHTML += `<option value="${c.code}">${c.name}</option>`;
+                    });
+                } catch(e) { /* ignore */ }
+            }
+        }
+
+        async function renderAnnualReport() {
+            const fy = document.getElementById('arFiscalYear').value;
+            const cat = document.getElementById('arCategory').value;
+            const content = document.getElementById('annualReportContent');
+            content.innerHTML = '<div style="text-align:center;padding:30px;"><i class="fas fa-spinner fa-spin"></i> กำลังโหลด...</div>';
+            try {
+                const qs = adminOrgParam(`/report-summary?fiscal_year=${fy}&category=${cat}`);
+                const res = await api(qs);
+                const d = res.data;
+                const orgNameDisplay = d.org_name || (currentUser && currentUser.org_name) || '';
+
+                let rows = '';
+                d.items.forEach(item => {
+                    rows += `<tr>
+                        <td style="text-align:center;">${item.no}</td>
+                        <td>${item.cat_name}</td>
+                        <td>${item.name}</td>
+                        <td style="text-align:center;">${item.unit}</td>
+                        <td style="text-align:center;">${item.brought_forward}</td>
+                        <td style="text-align:center;">${item.received}</td>
+                        <td style="text-align:center;">${item.issued}</td>
+                        <td style="text-align:center;font-weight:600;">${item.balance}</td>
+                        <td></td>
+                    </tr>`;
+                });
+
+                content.innerHTML = `
+                    <div id="annualReportPrint">
+                        <div style="text-align:center; font-size:1.25rem; font-weight:700; margin-bottom:4px;">
+                            แบบรายงานรับจ่ายพัสดุประจำปีงบประมาณ
+                        </div>
+                        <div style="text-align:center; font-size:1.1rem; font-weight:700; margin-bottom:8px;">
+                            ${orgNameDisplay}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-weight:600;">
+                            <span>รายงานการสำรวจ</span>
+                            <span>${d.category_filter}</span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+                            <thead>
+                                <tr style="background:#D9E1F2;">
+                                    <th style="${thStyle}">ลำดับ</th>
+                                    <th style="${thStyle}">ประเภท</th>
+                                    <th style="${thStyle}">รายการ</th>
+                                    <th style="${thStyle}">หน่วยนับ</th>
+                                    <th style="${thStyle}">ยอดยกมา</th>
+                                    <th style="${thStyle}">รับเข้า</th>
+                                    <th style="${thStyle}">จ่ายออก</th>
+                                    <th style="${thStyle}">คงเหลือ</th>
+                                    <th style="${thStyle}">หมายเหตุ</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                            <tfoot>
+                                <tr style="font-weight:700; background:#F5F5F5;">
+                                    <td colspan="4" style="${tdStyle} text-align:center;">รวมทั้งสิ้น</td>
+                                    <td style="${tdStyle} text-align:center;">${d.totals.brought_forward}</td>
+                                    <td style="${tdStyle} text-align:center;">${d.totals.received}</td>
+                                    <td style="${tdStyle} text-align:center;">${d.totals.issued}</td>
+                                    <td style="${tdStyle} text-align:center;">${d.totals.balance}</td>
+                                    <td style="${tdStyle}"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        </div>
+                    </div>`;
+            } catch (e) {
+                content.innerHTML = `<div style="color:red;padding:20px;">${e.message}</div>`;
+            }
+        }
+
+        const thStyle = 'border:1px solid #999; padding:6px 8px; text-align:center; font-weight:700;';
+        const tdStyle = 'border:1px solid #bbb; padding:5px 8px;';
+
+        function exportAnnualReport() {
+            const fy = document.getElementById('arFiscalYear').value;
+            const cat = document.getElementById('arCategory').value;
+            const qs = adminOrgParam(`/report-summary/export?fiscal_year=${fy}&category=${cat}`);
+            window.location.href = `/api${qs}`;
+        }
+
+        function printAnnualReport() {
+            const content = document.getElementById('annualReportPrint');
+            if (!content) return alert('กรุณาแสดงรายงานก่อน');
+            const w = window.open('', '_blank', 'width=900,height=700');
+            w.document.write(`<!DOCTYPE html><html><head>
+                <meta charset="UTF-8">
+                <title>แบบรายงานรับจ่ายพัสดุประจำปีงบประมาณ</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family:'Sarabun',sans-serif; margin:20mm; font-size:14pt; }
+                    table { width:100%; border-collapse:collapse; font-size:14pt; }
+                    th,td { border:1px solid #999; padding:5px 8px; }
+                    th { background:#D9E1F2; text-align:center; font-weight:700; }
+                    @media print { @page { size:A4 landscape; margin:15mm; } }
+                </style>
+            </head><body>${content.innerHTML}</body></html>`);
+            w.document.close();
+            w.focus();
+            setTimeout(() => w.print(), 500);
+        }
+
+        // ORGANIZATIONS MANAGEMENT (Admin only)
+        // ============================================================
+        async function renderOrgs() {
+            const tbody = document.querySelector('#orgsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">กำลังโหลด...</td></tr>';
+            try {
+                const res = await api('/organizations');
+                tbody.innerHTML = '';
+                res.data.forEach(o => {
+                    const createdDate = new Date(o.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${o.id}</td>
+                            <td><strong>${o.code}</strong></td>
+                            <td>${o.name}</td>
+                            <td>${createdDate}</td>
+                            <td class="text-center">
+                                <button class="btn btn-secondary" onclick="openEditOrgModal(${o.id},'${o.code.replace(/'/g,"\\'")}','${o.name.replace(/'/g,"\\'")}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger" onclick="deleteOrg(${o.id},'${o.name.replace(/'/g,"\\'")}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                if (res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">ไม่มีหน่วยงาน</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" style="color:red" class="text-center">${e.message}</td></tr>`;
+            }
+        }
+
+        function openAddOrgModal() {
+            document.getElementById('orgId').value = '';
+            document.getElementById('orgCode').value = '';
+            document.getElementById('editOrgName').value = '';
+            document.getElementById('orgModalTitle').innerHTML = '<i class="fas fa-building" style="color:var(--accent);"></i> เพิ่มหน่วยงาน';
+            document.getElementById('orgModal').style.display = 'flex';
+        }
+
+        function openEditOrgModal(id, code, name) {
+            document.getElementById('orgId').value = id;
+            document.getElementById('orgCode').value = code;
+            document.getElementById('editOrgName').value = name;
+            document.getElementById('orgModalTitle').innerHTML = '<i class="fas fa-building" style="color:var(--accent);"></i> แก้ไขหน่วยงาน';
+            document.getElementById('orgModal').style.display = 'flex';
+        }
+
+        async function saveOrg() {
+            const id = document.getElementById('orgId').value;
+            const code = document.getElementById('orgCode').value.trim();
+            const name = document.getElementById('editOrgName').value.trim();
+            if (!code || !name) return alert('กรุณากรอกรหัสและชื่อหน่วยงาน');
+            try {
+                if (id) {
+                    await api(`/organizations/${id}`, { method: 'PUT', body: { code, name } });
+                    showToast('แก้ไขหน่วยงานสำเร็จ');
+                } else {
+                    await api('/organizations', { method: 'POST', body: { code, name } });
+                    showToast('เพิ่มหน่วยงานสำเร็จ');
+                }
+                closeModal('orgModal');
+                renderOrgs();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function deleteOrg(id, name) {
+            if (!confirm(`ยืนยันลบหน่วยงาน "${name}" ?`)) return;
+            try {
+                await api(`/organizations/${id}`, { method: 'DELETE' });
+                showToast('ลบหน่วยงานสำเร็จ');
+                renderOrgs();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function loadAdminOrgDropdown() {
+            try {
+                const res = await api('/organizations');
+                const sel = document.getElementById('adminOrgFilter');
+                // Keep the first "ทั้งหมด" option
+                sel.innerHTML = '<option value="">ทั้งหมด</option>';
+                res.data.forEach(o => {
+                    sel.innerHTML += `<option value="${o.id}">${o.name}</option>`;
+                });
+                // Also populate newUserOrg dropdown
+                const userOrgSel = document.getElementById('newUserOrg');
+                if (userOrgSel) {
+                    userOrgSel.innerHTML = '<option value="">-- เลือกหน่วยงาน --</option>';
+                    res.data.forEach(o => {
+                        userOrgSel.innerHTML += `<option value="${o.id}">${o.code} — ${o.name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('Load org dropdown error:', e);
+            }
+        }
+
+        function onAdminOrgFilterChange() {
+            const sel = document.getElementById('adminOrgFilter');
+            currentAdminOrgFilter = sel.value ? parseInt(sel.value) : null;
+            // Refresh current view
+            const activePage = document.querySelector('.page-section.active');
+            if (activePage) {
+                const pageId = activePage.id;
+                if (pageId === 'dashboard') renderDashboard();
+                if (pageId === 'master') renderMaster();
+                if (pageId === 'transaction') renderTxHistory();
+            }
+        }
+
+        function openChangeUserPwModal(id, username) {
+            document.getElementById('changeUserPwId').value = id;
+            document.getElementById('changeUserPwName').textContent = username;
+            document.getElementById('changeUserPwNew').value = '';
+            document.getElementById('changeUserPwModal').style.display = 'flex';
+        }
+
+        async function doChangeUserPw() {
+            const id = document.getElementById('changeUserPwId').value;
+            const newPassword = document.getElementById('changeUserPwNew').value;
+            if (!newPassword) return alert('กรุณากรอกรหัสผ่านใหม่');
+            try {
+                await api(`/users/${id}/password`, { method: 'PUT', body: { newPassword } });
+                closeModal('changeUserPwModal');
+                showToast('เปลี่ยนรหัสผ่านสำเร็จ');
+            } catch (e) { alert(e.message); }
+        }
+
+        // ============================================================
+        // SESSION TIMEOUT MANAGEMENT
+        // ============================================================
+        const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 นาที
+        const SESSION_WARN_MS    =  5 * 60 * 1000; // เตือนที่เหลือ 5 นาที
+        let lastActivityTime = Date.now();
+        let sessionTimerInterval = null;
+        let warnShown = false;
+
+        function resetActivityTimer() {
+            lastActivityTime = Date.now();
+            warnShown = false;
+            const warnModal = document.getElementById('sessionWarningModal');
+            if (warnModal && warnModal.style.display === 'flex') {
+                warnModal.style.display = 'none';
+            }
+        }
+
+        function startSessionTimer() {
+            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+            sessionTimerInterval = setInterval(() => {
+                const elapsed   = Date.now() - lastActivityTime;
+                const remaining = SESSION_TIMEOUT_MS - elapsed;
+                const el        = document.getElementById('sessionCountdown');
+
+                if (remaining <= 0) {
+                    clearInterval(sessionTimerInterval);
+                    if (el) el.textContent = '00:00';
+                    doLogout();
+                    return;
+                }
+
+                const mins = Math.floor(remaining / 60000);
+                const secs = Math.floor((remaining % 60000) / 1000);
+                if (el) {
+                    el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                    el.style.color = remaining < SESSION_WARN_MS ? '#dc2626' : '';
+                    el.style.fontWeight = remaining < SESSION_WARN_MS ? '700' : '';
+                }
+
+                // แสดง popup เตือนครั้งเดียวเมื่อเหลือ 5 นาที
+                if (remaining <= SESSION_WARN_MS && !warnShown) {
+                    warnShown = true;
+                    document.getElementById('sessionWarningModal').style.display = 'flex';
+                }
+            }, 1000);
+        }
+
+        async function extendSession() {
+            try {
+                await api('/keep-alive', { method: 'POST' });
+                closeModal('sessionWarningModal');
+                showToast('ต่ออายุ Session สำเร็จ (+30 นาที)');
+            } catch (e) {
+                window.location.href = '/login.html';
+            }
+        }
+
+        // ============================================================
+        // AUDIT LOG
+        // ============================================================
+        const RESOURCE_TH = {
+            auth:         'ระบบยืนยันตัวตน',
+            items:        'วัสดุ',
+            transactions: 'เอกสาร',
+            settings:     'ตั้งค่า',
+            users:        'ผู้ใช้',
+            backup:       'สำรองข้อมูล',
+            restore:      'นำเข้าข้อมูล',
+        };
+
+        function formatAuditDetails(action, details, resourceId) {
+            const d = details || {};
+            const rid = resourceId || '';
+            const roleMap = { admin: 'ผู้ดูแล', user: 'เจ้าหน้าที่' };
+            const typeMap = { IN: 'รับเข้า', OUT: 'เบิกจ่าย' };
+            switch (action) {
+                case 'LOGIN_SUCCESS':
+                case 'LOGIN_FAILED':
+                    return '-';
+                case 'SETTINGS_UPDATE':
+                    return d.key === 'orgName'
+                        ? `เปลี่ยนชื่อหน่วยงานเป็น: ${d.value || ''}`
+                        : `เปลี่ยนค่า ${d.key || ''} เป็น: ${d.value || ''}`;
+                case 'TRANSACTION_CREATE': {
+                    const typeTH = typeMap[d.type] || d.type || '';
+                    return `สร้างเอกสาร ${d.doc_no || ''} (${typeTH}, ${d.lineCount || 0} รายการ)`;
+                }
+                case 'TRANSACTION_DELETE':
+                    return `ลบเอกสาร #${rid}`;
+                case 'ITEM_CREATE':
+                    return `เพิ่มวัสดุ: ${d.name || ''} (รหัส: ${d.code || ''})`;
+                case 'ITEM_UPDATE':
+                    return `แก้ไขวัสดุ: ${d.name || ''} (รหัส: ${d.code || ''})`;
+                case 'ITEM_DELETE':
+                    return `ลบวัสดุ #${rid}`;
+                case 'USER_CREATE': {
+                    const roleTH = roleMap[d.role] || d.role || '';
+                    return `สร้างผู้ใช้: ${d.newUsername || ''} (สิทธิ์: ${roleTH})`;
+                }
+                case 'USER_DELETE':
+                    return `ลบผู้ใช้: ${d.deletedUsername || ''}`;
+                case 'PASSWORD_CHANGE':
+                    return d.changedBy
+                        ? `เปลี่ยนรหัสผ่าน โดย: ${d.changedBy}`
+                        : 'เปลี่ยนรหัสผ่าน';
+                case 'DATA_BACKUP':
+                    return `สำรองข้อมูล (วัสดุ ${d.itemCount ?? 0} รายการ, เอกสาร ${d.txCount ?? 0} รายการ)`;
+                case 'DATA_RESTORE':
+                    return `นำเข้าข้อมูล เวอร์ชัน ${d.version || ''} (วัสดุ ${d.itemCount ?? 0} รายการ)`;
+                case 'DATA_RESET':
+                    return 'ล้างข้อมูลเอกสารทั้งหมด';
+                case 'RATE_LIMIT_UPDATE': {
+                    const rlLabel = { general:'ทั่วไป', login:'เข้าสู่ระบบ', write:'เขียนข้อมูล' };
+                    const state = d.enabled ? 'เปิด' : 'ปิด';
+                    return `ตั้งค่า Rate Limit [${rlLabel[d.key] || d.key}]: ${state}, ${d.max_requests} ครั้ง / ${d.window_minutes} นาที`;
+                }
+                case 'SECURITY_TEST':
+                    return `ทดสอบความปลอดภัย — เกรด ${d.grade} (ผ่าน ${d.passed}/${d.total} รายการ)`;
+                default:
+                    return details ? JSON.stringify(details) : '-';
+            }
+        }
+
+        const ACTION_COLORS = {
+            LOGIN_SUCCESS:       { bg:'#dcfce7', color:'#166534' },
+            LOGIN_FAILED:        { bg:'#fee2e2', color:'#991b1b' },
+            ITEM_CREATE:         { bg:'#dbeafe', color:'#1e40af' },
+            ITEM_UPDATE:         { bg:'#e0f2fe', color:'#0c4a6e' },
+            ITEM_DELETE:         { bg:'#fee2e2', color:'#991b1b' },
+            TRANSACTION_CREATE:  { bg:'#dcfce7', color:'#166534' },
+            TRANSACTION_DELETE:  { bg:'#fee2e2', color:'#991b1b' },
+            SETTINGS_UPDATE:     { bg:'#fef9c3', color:'#713f12' },
+            DATA_BACKUP:         { bg:'#f3e8ff', color:'#6b21a8' },
+            DATA_RESTORE:        { bg:'#ffedd5', color:'#9a3412' },
+            DATA_RESET:          { bg:'#fee2e2', color:'#991b1b' },
+            USER_CREATE:         { bg:'#dbeafe', color:'#1e40af' },
+            USER_DELETE:         { bg:'#fee2e2', color:'#991b1b' },
+            PASSWORD_CHANGE:     { bg:'#fef9c3', color:'#713f12' },
+            RATE_LIMIT_UPDATE:   { bg:'#f3e8ff', color:'#6b21a8' },
+            SECURITY_TEST:       { bg:'#ecfdf5', color:'#065f46' },
+        };
+
+        async function renderAuditLog(page = 1) {
+            const action   = document.getElementById('auditActionFilter').value;
+            const dateFrom = document.getElementById('auditDateFrom').value;
+            const dateTo   = document.getElementById('auditDateTo').value;
+            const limit    = 50;
+
+            const tbody = document.getElementById('auditLogTable');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">กำลังโหลด...</td></tr>';
+
+            try {
+                let qs = `?page=${page}&limit=${limit}`;
+                if (action)   qs += `&action=${encodeURIComponent(action)}`;
+                if (dateFrom) qs += `&dateFrom=${dateFrom}`;
+                if (dateTo)   qs += `&dateTo=${dateTo}`;
+
+                const res = await api(`/audit-logs${qs}`);
+                tbody.innerHTML = '';
+
+                if (res.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted);">ไม่มีข้อมูล</td></tr>';
+                } else {
+                    res.data.forEach(row => {
+                        const c = ACTION_COLORS[row.action] || { bg:'#f1f3f7', color:'#374151' };
+                        const badge    = `<span style="background:${c.bg};color:${c.color};padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;white-space:nowrap;">${row.action}</span>`;
+                        const ts       = new Date(row.timestamp).toLocaleString('th-TH', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+                        const det        = formatAuditDetails(row.action, row.details, row.resource_id);
+                        const resourceTH = RESOURCE_TH[row.resource] || row.resource || '-';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="white-space:nowrap;">${ts}</td>
+                                <td><strong>${row.username || '-'}</strong></td>
+                                <td>${badge}</td>
+                                <td style="color:var(--text-muted);">${resourceTH}</td>
+                                <td>${det}</td>
+                                <td style="font-family:monospace;font-size:0.82rem;color:var(--text-muted);">${row.ip_address || '-'}</td>
+                            </tr>`;
+                    });
+                }
+
+                // Pagination
+                const pages = res.pages || 1;
+                const pagDiv = document.getElementById('auditPagination');
+                pagDiv.innerHTML = '';
+                if (pages > 1) {
+                    const info = document.createElement('span');
+                    info.style.cssText = 'color:var(--text-muted);font-size:0.85rem;margin-right:8px;';
+                    info.textContent = `หน้า ${res.page}/${pages} (${res.total} รายการ)`;
+                    pagDiv.appendChild(info);
+
+                    for (let p = 1; p <= pages; p++) {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn ' + (p === res.page ? 'btn-primary' : 'btn-secondary');
+                        btn.style.padding = '4px 10px';
+                        btn.textContent = p;
+                        btn.onclick = () => renderAuditLog(p);
+                        pagDiv.appendChild(btn);
+                    }
+                } else {
+                    pagDiv.innerHTML = `<span style="color:var(--text-muted);font-size:0.85rem;">${res.total} รายการ</span>`;
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color:red" class="text-center">${e.message}</td></tr>`;
+            }
+        }
+
+        // ============================================================
+        // RATE LIMIT SETTINGS
+        // ============================================================
+        const RL_INFO = {
+            general: { label: 'ทั่วไป',        desc: 'จำกัด request ทั้งหมด (ทุก route)' },
+            login:   { label: 'เข้าสู่ระบบ',   desc: 'จำกัดการ login (ป้องกัน brute force)' },
+            write:   { label: 'เขียนข้อมูล',   desc: 'จำกัด POST / PUT / DELETE' },
+        };
+
+        // ============================================================
+        // AUTO BACKUP
+        // ============================================================
+        let pendingAutoRestoreId = null;
+
+        async function renderAutoBackups() {
+            const container = document.getElementById('autoBackupList');
+            container.innerHTML = '<p style="color:var(--text-muted);padding:12px 0;"><i class="fas fa-spinner fa-spin"></i> กำลังโหลด...</p>';
+            try {
+                const data = await api('/auto-backups');
+                if (!data.backups || data.backups.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+                            <i class="fas fa-cloud" style="font-size:2.5rem; margin-bottom:12px; display:block; opacity:0.3;"></i>
+                            ยังไม่มี Auto Backup — ระบบจะสร้างอัตโนมัติทุก 24 ชั่วโมง
+                        </div>`;
+                    return;
+                }
+                const rows = data.backups.map((b, i) => {
+                    const dt = new Date(b.created_at);
+                    const dateStr = dt.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                    const timeStr = dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                    const isLatest = i === 0;
+                    return `
+                    <tr>
+                        <td style="font-size:0.85rem; color:var(--text-muted); white-space:nowrap;">#${b.id}</td>
+                        <td>
+                            <div style="font-weight:600;">${dateStr}</div>
+                            <div style="font-size:0.82rem; color:var(--text-muted);">${timeStr} น.</div>
+                        </td>
+                        <td class="text-center">
+                            <span style="background:#eff6ff; color:#1e40af; padding:2px 10px; border-radius:99px; font-size:0.82rem; font-weight:600;">
+                                ${Number(b.item_count).toLocaleString()} รายการ
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span style="background:#f0fdf4; color:#166534; padding:2px 10px; border-radius:99px; font-size:0.82rem; font-weight:600;">
+                                ${Number(b.tx_count).toLocaleString()} เอกสาร
+                            </span>
+                        </td>
+                        <td class="text-center" style="white-space:nowrap;">
+                            ${isLatest ? '<span style="background:#fef9c3; color:#713f12; padding:2px 8px; border-radius:99px; font-size:0.75rem; margin-right:6px;">ล่าสุด</span>' : ''}
+                            <button class="btn btn-sm btn-secondary" onclick="downloadAutoBackup(${b.id})" title="ดาวน์โหลด">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="confirmAutoRestore(${b.id}, '${dateStr} ${timeStr}', ${b.item_count}, ${b.tx_count})" title="กู้คืน" style="margin-left:4px;">
+                                <i class="fas fa-history"></i> กู้คืน
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+                container.innerHTML = `
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead><tr>
+                                <th style="width:60px;">#</th>
+                                <th>วันที่ Backup</th>
+                                <th class="text-center">วัสดุ</th>
+                                <th class="text-center">เอกสาร</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            } catch (e) {
+                container.innerHTML = `<p style="color:var(--danger);">เกิดข้อผิดพลาด: ${e.message}</p>`;
+            }
+        }
+
+        async function downloadAutoBackup(id) {
+            try {
+                const data = await api(`/auto-backups`);
+                const bk = data.backups.find(b => b.id === id);
+                // ดึงข้อมูลเต็มจาก restore endpoint แบบ dry-run ไม่ได้ — ต้องเพิ่ม GET endpoint
+                // ใช้วิธีง่ายกว่า: เรียก API พิเศษ
+                const full = await api(`/auto-backups/${id}/download`);
+                const blob = new Blob([JSON.stringify(full.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const dt = bk ? new Date(bk.created_at).toISOString().slice(0, 16).replace('T', '_').replace(':', '') : id;
+                a.download = `auto-backup-${dt}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('ดาวน์โหลดไม่สำเร็จ: ' + e.message);
+            }
+        }
+
+        function confirmAutoRestore(id, dateLabel, itemCount, txCount) {
+            pendingAutoRestoreId = id;
+            document.getElementById('autoBackupRestoreInfo').innerHTML = `
+                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                    <tr><td style="padding:6px 0; color:var(--text-muted); width:130px;">วันที่ Backup</td><td style="font-weight:600;">${dateLabel} น.</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--text-muted);">จำนวนวัสดุ</td><td style="font-weight:600;">${Number(itemCount).toLocaleString()} รายการ</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--text-muted);">จำนวนเอกสาร</td><td style="font-weight:600;">${Number(txCount).toLocaleString()} เอกสาร</td></tr>
+                </table>`;
+            document.getElementById('autoBackupRestoreModal').style.display = 'flex';
+        }
+
+        async function doAutoBackupRestore() {
+            if (!pendingAutoRestoreId) return;
+            const btn = document.getElementById('autoBackupRestoreBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังกู้คืน...';
+            try {
+                const data = await api(`/auto-backups/${pendingAutoRestoreId}/restore`, { method: 'POST' });
+                // ดาวน์โหลด snapshot อัตโนมัติ
+                if (data.autoBackup) {
+                    const blob = new Blob([JSON.stringify(data.autoBackup, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pre-restore-snapshot-${new Date().toISOString().slice(0,16).replace(/:/g,'')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+                closeModal('autoBackupRestoreModal');
+                showToast('กู้คืนข้อมูลสำเร็จ');
+                renderAutoBackups();
+                renderDashboard();
+            } catch (e) {
+                alert('กู้คืนไม่สำเร็จ: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-history"></i> ยืนยันกู้คืน';
+                pendingAutoRestoreId = null;
+            }
+        }
+
+        async function renderRateLimit() {
+            const container = document.getElementById('rateLimitList');
+            container.innerHTML = '<p style="color:var(--text-muted);">กำลังโหลด...</p>';
+            try {
+                const res = await api('/rate-limits');
+                container.innerHTML = '';
+                res.data.forEach(row => {
+                    const info = RL_INFO[row.key] || { label: row.key, desc: '' };
+                    const badge = row.enabled
+                        ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:600;">เปิด</span>'
+                        : '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:600;">ปิด</span>';
+                    container.innerHTML += `
+                        <div class="card" style="margin-bottom:12px;">
+                            <div class="card-body" style="padding:16px 20px;">
+                                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:16px;">
+                                    <div style="min-width:200px; flex:1;">
+                                        <div style="font-weight:600; font-size:0.95rem; margin-bottom:3px;">
+                                            ${info.label} &nbsp;${badge}
+                                        </div>
+                                        <div style="font-size:0.82rem; color:var(--text-muted);">${info.desc}</div>
+                                        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                                            ปัจจุบัน: <strong>${row.max_requests} ครั้ง / ${row.window_minutes} นาที</strong>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <label class="rl-switch" title="เปิด/ปิด">
+                                            <input type="checkbox" id="rl_enabled_${row.key}" ${row.enabled ? 'checked' : ''}
+                                                   onchange="toggleRLInputs('${row.key}', this.checked)">
+                                            <span class="rl-slider"></span>
+                                        </label>
+                                        <span id="rl_status_${row.key}" style="font-size:0.85rem; color:var(--text-muted); min-width:70px;">
+                                            ${row.enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                                        </span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <label style="font-size:0.82rem; color:var(--text-muted); white-space:nowrap;">จำนวนครั้งสูงสุด</label>
+                                        <input type="number" id="rl_max_${row.key}" value="${row.max_requests}"
+                                               min="1" max="10000" style="width:90px; padding:7px 10px;"
+                                               ${!row.enabled ? 'disabled' : ''}>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <label style="font-size:0.82rem; color:var(--text-muted); white-space:nowrap;">ช่วงเวลา (นาที)</label>
+                                        <input type="number" id="rl_win_${row.key}" value="${row.window_minutes}"
+                                               min="1" max="1440" style="width:80px; padding:7px 10px;"
+                                               ${!row.enabled ? 'disabled' : ''}>
+                                    </div>
+                                    <button class="btn btn-primary" style="flex-shrink:0;" onclick="saveRateLimit('${row.key}')">
+                                        <i class="fas fa-save"></i> บันทึก
+                                    </button>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) {
+                container.innerHTML = `<p style="color:var(--danger);">${e.message}</p>`;
+            }
+        }
+
+        function toggleRLInputs(key, enabled) {
+            document.getElementById(`rl_max_${key}`).disabled = !enabled;
+            document.getElementById(`rl_win_${key}`).disabled = !enabled;
+            document.getElementById(`rl_status_${key}`).textContent = enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน';
+        }
+
+        async function saveRateLimit(key) {
+            const enabled      = document.getElementById(`rl_enabled_${key}`).checked;
+            const max_requests = parseInt(document.getElementById(`rl_max_${key}`).value);
+            const window_minutes = parseInt(document.getElementById(`rl_win_${key}`).value);
+            if (isNaN(max_requests) || max_requests < 1 || max_requests > 10000)
+                return alert('จำนวนครั้งสูงสุดต้องเป็น 1–10000');
+            if (isNaN(window_minutes) || window_minutes < 1 || window_minutes > 1440)
+                return alert('ช่วงเวลาต้องเป็น 1–1440 นาที');
+            try {
+                await api(`/rate-limits/${key}`, { method: 'PUT', body: { enabled, max_requests, window_minutes } });
+                showToast('บันทึกการตั้งค่า Rate Limit สำเร็จ');
+                renderRateLimit();
+            } catch (e) {
+                alert('บันทึกไม่สำเร็จ: ' + e.message);
+            }
+        }
+
+        // ============================================================
+        // EXPORT EXCEL (คงเดิม)
+        // ============================================================
+        function exportReportToExcel() {
+            const printArea = document.getElementById('printArea');
+            const reportTable = printArea ? printArea.querySelector('table') : null;
+            if (!reportTable) {
+                alert("กรุณากด 'แสดงรายงาน' ก่อนเพื่อเตรียมข้อมูลสำหรับส่งออก");
+                return;
+            }
+
+            const NUM_COLS = 7; // ลำดับ ประเภท รายการ จำนวน ราคา รวมเงิน หมายเหตุ
+            const aoa = []; // array of arrays
+
+            // --- ส่วน header (ชื่อรายงาน / วันที่ / ชื่อหน่วยงาน / แบบ อปท.วส) ---
+            const headerEl = printArea.querySelector('.doc-header');
+            if (headerEl) {
+                headerEl.innerText.split('\n').forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed) aoa.push([trimmed]);
+                });
+            }
+            const subEl = printArea.querySelector('.doc-sub');
+            if (subEl) {
+                const sub = subEl.innerText.trim();
+                if (sub) aoa.push([sub]);
+            }
+            aoa.push([]); // แถวว่างคั่น
+
+            const headerRows = aoa.length; // นับแถว header ก่อนใส่ตาราง
+
+            // --- ส่วนตาราง ---
+            const tableRows = reportTable.querySelectorAll('tr');
+            tableRows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                aoa.push(Array.from(cells).map(c => {
+                    const txt = c.innerText.trim();
+                    // แปลงตัวเลขให้เป็น number type เพื่อให้ Excel จัดรูปแบบได้
+                    const num = parseFloat(txt.replace(/,/g, ''));
+                    return (!isNaN(num) && txt !== '') ? num : txt;
+                }));
+            });
+
+            // --- ส่วนลายเซ็น ---
+            aoa.push([]);
+            const signDivs = printArea.querySelectorAll('div[style*="justify-content:space-between"]');
+            if (signDivs.length > 0) {
+                const lastSignDiv = signDivs[signDivs.length - 1];
+                const cols = lastSignDiv.querySelectorAll('div[style*="width:30%"]');
+                if (cols.length > 0) {
+                    const signRow = [];
+                    cols.forEach((col, idx) => {
+                        col.innerText.split('\n').forEach((line, li) => {
+                            if (!signRow[li]) signRow[li] = new Array(NUM_COLS).fill('');
+                            // วางลายเซ็นที่ col 0, 3, 6 (ห่างกัน 3 ช่อง)
+                            const colPos = idx * Math.floor((NUM_COLS - 1) / (cols.length - 1 || 1));
+                            signRow[li][colPos] = line.trim();
+                        });
+                    });
+                    signRow.forEach(r => aoa.push(r));
+                }
+            }
+
+            // --- สร้าง worksheet ---
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+            // กำหนดความกว้างคอลัมน์
+            ws['!cols'] = [
+                { wch: 8 },   // ลำดับ
+                { wch: 22 },  // ประเภท
+                { wch: 38 },  // รายการ
+                { wch: 10 },  // จำนวน
+                { wch: 14 },  // ราคา
+                { wch: 16 },  // รวมเงิน
+                { wch: 16 },  // หมายเหตุ
+            ];
+
+            // Merge เซลล์ header (แถว 0 ถึง headerRows-2 ให้ข้ามทั้งแถว)
+            ws['!merges'] = [];
+            for (let r = 0; r < headerRows - 1; r++) {
+                ws['!merges'].push({ s: { r, c: 0 }, e: { r, c: NUM_COLS - 1 } });
+            }
+
+            // จัด alignment ให้เซลล์ header กึ่งกลาง
+            for (let r = 0; r < headerRows - 1; r++) {
+                const cellAddr = XLSX.utils.encode_cell({ r, c: 0 });
+                if (ws[cellAddr]) {
+                    ws[cellAddr].s = { alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+                }
+            }
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'รายงานวัสดุ');
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `รายงานวัสดุคงเหลือ_${dateStr}.xlsx`);
+        }
+    </script>
+</body>
+</html>
